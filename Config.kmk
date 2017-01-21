@@ -593,11 +593,11 @@ endif
 VBOX_WITH_WEBSERVICES = 1
 VBOX_WITH_WEBSERVICES_SSL = 1
 # The Qt GUI.
-VBOX_WITH_QTGUI = 0
+VBOX_WITH_QTGUI = 
 if1of ($(KBUILD_TARGET), linux win solaris)
- VBOX_WITH_QTGUI_V5 = 0 # r=bird: s/VBOX_WITH_QTGUI_V5/VBOX_WITH_QT5/g - our we released version 5.0 of the VirtualBox GUI last year, remember?
+ VBOX_WITH_QTGUI_V5 =  # r=bird: s/VBOX_WITH_QTGUI_V5/VBOX_WITH_QT5/g - our we released version 5.0 of the VirtualBox GUI last year, remember?
 else if "$(KBUILD_TARGET)" == "darwin" && $(KBUILD_HOST_VERSION_MAJOR) >= 13 # (OS X 10.9 Mavericks)
- VBOX_WITH_QTGUI_V5 = 0
+ VBOX_WITH_QTGUI_V5 = 
 endif
 # Indicates the Qt is Cocoa based on the Mac.
 ifeq ($(KBUILD_TARGET),darwin)
@@ -622,33 +622,33 @@ VBOX_WITH_VRDP_RDESKTOP = 1
 ## The Direct Framebuffer GUI.
 #VBOX_WITH_VBOXFB = 1
 # Enables the Python<->XPCOM, Python<->COM and (WS enabled) Python<->WS bindings.
-VBOX_WITH_PYTHON ?= 0
+VBOX_WITH_PYTHON ?= 
 # Enables the PERL<->WS binding (if WS enabled).
 #VBOX_WITH_PERL ?= 1
 # Enables the PHP<->WS binding (if WS enabled).
-VBOX_WITH_PHP ?= 0
+VBOX_WITH_PHP ?= 
 if1of ($(KBUILD_TARGET), darwin linux solaris)
  # Enable Java<->XPCOM bridge + glue code
- VBOX_WITH_JXPCOM ?= 0
+ VBOX_WITH_JXPCOM ?= 
 endif
 if1of ($(KBUILD_TARGET), )
  # Enable Java<->MSCOM glue, bridge is provided by an external lib (Jacob)
- VBOX_WITH_JMSCOM ?= 0
+ VBOX_WITH_JMSCOM ?= 
 endif
 if1of ($(KBUILD_TARGET), darwin linux solaris)
  # Enable Java<->JAX-WS bridge
- VBOX_WITH_JWS ?= 0
+ VBOX_WITH_JWS ?= 
 endif
 # Use XPIDL instead of XSLT stylesheet
 VBOX_WITH_JAVA_SUPPORT_IN_XPIDL ?=
 # Build against multiple Python versions present in the system
-VBOX_WITH_MULTIVERSION_PYTHON ?= 1
+VBOX_WITH_MULTIVERSION_PYTHON ?= 
 # Enable the kchmviewer.
 VBOX_WITH_KCHMVIEWER = 1
 # Build the Validation Kit.
 VBOX_WITH_VALIDATIONKIT = 1
 # Build the testcases.
-VBOX_WITH_TESTCASES = 0
+VBOX_WITH_TESTCASES = 
 # Enable this to build vditool even if VBOX_WITH_TESTCASES is disabled
 VBOX_WITH_VDITOOL =
 # Enable this to build vbox-img even if VBOX_WITH_TESTCASES is disabled
