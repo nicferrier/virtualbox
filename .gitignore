@@ -1,0 +1,5 @@
+env.sh
+*.pyc
+out/*
+configure.log
+AutoConfig.kmk
