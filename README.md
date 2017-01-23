@@ -26,4 +26,12 @@ to build:
 * make sure you disable hardening to do dev builds, otherwise you can't run directly from build
 * builds end up in out/linux.amd64/release/bin
 
+helping with logging:
 
+* the RTPrintf function does a lot of logging
+* some things run inside the server with no logging by default
+ * you can start the server manually to see the logging, like:
+ 
+```
+out/linux.amd64/release/bin./VBoxSVC
+```
