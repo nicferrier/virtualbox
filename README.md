@@ -35,3 +35,12 @@ helping with logging:
 ```
 out/linux.amd64/release/bin./VBoxSVC
 ```
+
+handling Utf8 strings:
+
+```
+char *nicpsz = NULL;
+RTStrAPrintf(&nicpsz, "%s", strTargetPath.c_str());
+RTPrintf("import target path %s\n", nicpsz);
+RTStrFree(nicpsz);
+```
