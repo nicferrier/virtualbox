@@ -89,7 +89,7 @@ ifndef VBOX_ONLY_DOCS
  	$(if $(VBOX_WITH_NAT_SERVICE),../../NetworkServices/NetLib/VBoxNetPortForwardString.cpp,)
  VBoxManage_SOURCES.win = \
  	VBoxManage.rc
- VBoxManage_LIBS      += $(LIB_DDU) curl
+ VBoxManage_LIBS      += $(LIB_DDU)
 
  # VBoxNetPortForwardString.h
  VBoxManageNATNetwork.cpp_INCS += ../../NetworkServices/NetLib/

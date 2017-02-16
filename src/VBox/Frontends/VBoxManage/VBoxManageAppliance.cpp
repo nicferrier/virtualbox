@@ -30,9 +30,6 @@
 #include <VBox/com/errorprint.h>
 #include <VBox/com/VirtualBox.h>
 
-#include <curl/curl.h>
-#include <curl/easy.h>
-
 #include <list>
 #include <map>
 #endif /* !VBOX_ONLY_DOCS */
@@ -146,38 +143,6 @@ static const RTGETOPTDEF g_aImportApplianceOptions[] =
     { "--disk",                 'D', RTGETOPT_REQ_STRING },
     { "--options",              'O', RTGETOPT_REQ_STRING },
 };
-
-/* swallow data from the curl http check
- */
-size_t httpCheckWriteCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-     // It's not necessary to process the response body - but this is how you do it.
-     //  char* data = (char*) calloc((size * nmemb) + nmemb, sizeof(char));
-     //  strncpy(data, ptr, (size * nmemb));
-     //  RTPrintf("\nhttpCheck: %d %s\n", (size * nmemb), data);
-     //  free(data);
-     return size * nmemb;
-}
-
-long httpCheck() 
-{
-     long response = -1;
-     CURL *curl = curl_easy_init();
-     if (curl) 
-     {
-          CURLcode res;
-          curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8009");
-          curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, httpCheckWriteCallback);
-          res = curl_easy_perform(curl);
-          if (res == CURLE_OK)
-          {
-               curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response);
-          }
-          curl_easy_cleanup(curl);
-     }
-     return response;
-}
-
 
 
 RTEXITCODE handleImportAppliance(HandlerArg *arg)
@@ -347,6 +312,7 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
         // call interpret(); this can yield both warnings and errors, so we need
         // to tinker with the error info a bit
         RTStrmPrintf(g_pStdErr, "Interpreting %ls...\n", path.raw());
+
         rc = pAppliance->Interpret();
         com::ErrorInfo info0(pAppliance, COM_IIDOF(IAppliance));
 
@@ -404,7 +370,6 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
         }
 
         uint32_t cLicensesInTheWay = 0;
-        bool httpCheckPassed = false;
 
         // dump virtual system descriptions and match command-line arguments
         if (cVirtualSystemDescriptions > 0)
@@ -483,10 +448,8 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
                             break;
 
                         case VirtualSystemDescriptionType_ProductUrl:
-                             responseCode = httpCheck();
-                             httpCheckPassed = (responseCode == 200l);
-                             RTPrintf("%2u: ProductUrl: \"%ls\"  HTTP product check: %d (%ld)\n",
-                                      a, aVBoxValues[a], httpCheckPassed, responseCode);
+                            RTPrintf("%2u: ProductUrl: \"%ls\" \n",
+                                     a, aVBoxValues[a]);
                             break;
 
                         case VirtualSystemDescriptionType_Vendor:
@@ -915,10 +878,8 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
                 RTMsgError("Cannot import until the license agreement listed above is accepted.");
             else if (cLicensesInTheWay > 1)
                 RTMsgError("Cannot import until the %c license agreements listed above are accepted.", cLicensesInTheWay);
-            else if (!httpCheckPassed)
-                 RTMsgError("the HTTP check on the product failed.");
 
-            if (!cLicensesInTheWay && httpCheckPassed && fExecute)
+            if (!cLicensesInTheWay && fExecute)
             {
                 // go!
                 ComPtr<IProgress> progress;
