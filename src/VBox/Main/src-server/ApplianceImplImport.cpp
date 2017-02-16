@@ -30,6 +30,10 @@
 #include <iprt/crypto/store.h>
 #include <iprt/crypto/x509.h>
 
+#include <curl/curl.h>
+#include <curl/easy.h>
+
+
 #include <VBox/vd.h>
 #include <VBox/com/array.h>
 
@@ -647,6 +651,13 @@ HRESULT Appliance::interpret()
                         Utf8Str strFilename = di.strHref;
                         if (!strFilename.length())
                             strFilename = Utf8StrFmt("%s.vmdk", hd.strDiskId.c_str());
+
+
+                        /* We have the filename of the disk image inside */
+                        char *nicpsz = NULL;
+                        RTStrAPrintf(&nicpsz, "%s", strFilename.c_str());
+                        RTPrintf("disk image filename %s\n", nicpsz);
+                        RTStrFree(nicpsz);
 
                         Utf8Str strTargetPath = Utf8Str(strMachineFolder);
                         strTargetPath.append(RTPATH_DELIMITER).append(di.strHref);
@@ -2217,6 +2228,48 @@ HRESULT Appliance::i_importDoIt(TaskOVF *pTask, AutoWriteLockBase &rWriteLock, R
     return hrc;
 }
 
+
+
+
+/* swallow data from the curl http check
+ */
+size_t httpCheckWriteCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+     // It's not necessary to process the response body - but this is how you do it.
+     //  char* data = (char*) calloc((size * nmemb) + nmemb, sizeof(char));
+     //  strncpy(data, ptr, (size * nmemb));
+     //  RTPrintf("\nhttpCheck: %d %s\n", (size * nmemb), data);
+     //  free(data);
+     return size * nmemb;
+}
+
+long httpCheck(char *digest) 
+{
+     long response = -1;
+     CURL *curl = curl_easy_init();
+     if (curl) 
+     {
+          CURLcode res;
+          curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8009");
+          curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, httpCheckWriteCallback);
+
+
+          char *digest_param = NULL;
+          RTStrAPrintf(&digest_param, "digest=%s", digest);
+          RTPrintf("POST param: %s\n", digest_param);
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, digest_param);
+          res = curl_easy_perform(curl);
+          if (res == CURLE_OK)
+          {
+               curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response);
+          }
+          RTStrFree(digest_param);
+          curl_easy_cleanup(curl);
+     }
+     return response;
+}
+
+
 /**
  * Undocumented, you figure it from the name.
  *
@@ -2230,10 +2283,15 @@ HRESULT Appliance::i_verifyManifestFile(ImportStack &stack)
     int vrc;
 
     /*
-     * No manifest is fine, it always matches.
+     * With no manifest we should just fail
      */
     if (m->hTheirManifest == NIL_RTMANIFEST)
-        hrc = S_OK;
+    {
+        /* can we put the kill switch for no manifest here? */
+        RTPrintf("there is no manifest\n");
+        hrc = setErrorVrc(-1, tr("No manifest"), -1, "");
+        // hrc = S_OK;
+    }
     else
     {
         /*
@@ -2246,11 +2304,21 @@ HRESULT Appliance::i_verifyManifestFile(ImportStack &stack)
         {
             uint32_t fType = 0;
             char szDigest[512 + 1];
-            vrc = RTManifestEntryQueryAttr(m->hOurManifest, m->strOvfManifestEntry.c_str(), NULL, RTMANIFEST_ATTR_ANY,
-                                           szDigest, sizeof(szDigest), &fType);
-            if (RT_SUCCESS(vrc))
-                vrc = RTManifestEntrySetAttr(m->hTheirManifest, m->strOvfManifestEntry.c_str(),
-                                             NULL /*pszAttr*/, szDigest, fType);
+
+            vrc = RTManifestEntryQueryAttr(m->hOurManifest, 
+                                           m->strOvfManifestEntry.c_str(), 
+                                           NULL, 
+                                           RTMANIFEST_ATTR_ANY,
+                                           szDigest, 
+                                           sizeof(szDigest), 
+                                           &fType);
+            if (RT_SUCCESS(vrc)) {
+                vrc = RTManifestEntrySetAttr(m->hTheirManifest, 
+                                             m->strOvfManifestEntry.c_str(),
+                                             NULL /*pszAttr*/, 
+                                             szDigest, 
+                                             fType);
+            }
             if (RT_FAILURE(vrc))
                 return setError(VBOX_E_IPRT_ERROR, tr("Error fudging missing OVF digest in manifest: %Rrc"), vrc);
         }
@@ -2266,10 +2334,49 @@ HRESULT Appliance::i_verifyManifestFile(ImportStack &stack)
          * first in an OVA, then manifest).
          */
         char szErr[256];
-        vrc = RTManifestEqualsEx(m->hTheirManifest, m->hOurManifest, NULL /*papszIgnoreEntries*/,
-                                 NULL /*papszIgnoreAttrs*/, RTMANIFEST_EQUALS_IGN_MISSING_ATTRS, szErr, sizeof(szErr));
-        if (RT_SUCCESS(vrc))
+        vrc = RTManifestEqualsEx(m->hTheirManifest, 
+                                 m->hOurManifest, 
+                                 NULL /*papszIgnoreEntries*/,
+                                 NULL /*papszIgnoreAttrs*/, 
+                                 RTMANIFEST_EQUALS_IGN_MISSING_ATTRS, 
+                                 szErr, 
+                                 sizeof(szErr));
+        
+        // If all ok try and check it?
+        if (RT_SUCCESS(vrc)) {
             hrc = S_OK;
+            
+            // We need to find the correct entry, which will be a vmdk
+            // entry; maybe use this? from mainfest2.cpp --
+            // rtManifestGetEntry
+            
+            // In the mean time we could use a fixed name for all box discs
+            
+            uint32_t fType = 0;
+            char szDigest[512 + 1];
+            vrc = RTManifestEntryQueryAttr(m->hOurManifest, 
+                                           "nic-disk1.vmdk", //m->strOvfManifestEntry.c_str(), 
+                                           "SHA1", 
+                                           RTMANIFEST_ATTR_ANY,
+                                           szDigest, 
+                                           sizeof(szDigest), 
+                                           &fType);
+            if (RT_SUCCESS(vrc)) {
+                long code = httpCheck(szDigest);
+                RTPrintf("http response for %s was %ld\n", szDigest, code);
+
+                if (code == 200l) {
+                    hrc = S_OK;
+                }
+                else {
+                    hrc = setErrorVrc(-1, "Digest registration failed");
+                }
+            }
+            else {
+                hrc = setErrorVrc(-2, "Digest for disk not found.");
+            }
+
+        }
         else
             hrc = setErrorVrc(vrc, tr("Digest mismatch (%Rrc): %s"), vrc, szErr);
     }
