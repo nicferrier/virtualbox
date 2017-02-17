@@ -13,6 +13,7 @@ That means:
 I also want:
 
 * no gui (because everyone's using vagrant)
+* to allow only NAT networking (because anything else makes enterprises nervous)
 
 
 This repository is my hacks on virtulabox to make that work.
@@ -29,6 +30,11 @@ This repository is my hacks on virtulabox to make that work.
 * a vm image has a manifest file and the disk manifest is registered - the image should be imported
  * turn on an image
 
+
+### NAT networking
+
+Seemingly this can be controlled with VboxManageAppliance.cpp where
+the image is imported. If the card is not NAT we could reject it.
 
 ## to build
 
