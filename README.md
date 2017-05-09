@@ -22,13 +22,13 @@ This repository is my hacks on virtulabox to make that work.
 ### manifest scenarios
 
 * a vm image has no manifest file - the image should be rejected
- * Ubuntu image has no manifest
+  * Ubuntu image has no manifest
 * a vm image has an incorrect manifest file - the image should be rejected
- * nic-hacked.ova has a hacked manifest
+  * nic-hacked.ova has a hacked manifest
 * a vm image has a manifest file but the disk manifest is not in the specified store - the image should be rejected
- * lispserver.el controls that - all turned off as things stand
+  * lispserver.el controls that - all turned off as things stand
 * a vm image has a manifest file and the disk manifest is registered - the image should be imported
- * turn on an image
+  * turn on an image
 
 
 ### NAT networking
