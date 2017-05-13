@@ -65,6 +65,61 @@ RTPrintf("import target path %s\n", nicpsz);
 RTStrFree(nicpsz);
 ```
 
+## to build for Windows 64
+
+OMG this is so complicated.
+
+First get all the depends which means compiling OpenSSL at the right version.
+
+### openssl 1.0.1
+
+I used git to checkout `1_0_1u` of openssl.
+
+I used
+[this](https://wiki.openssl.org/index.php/Compilation_and_Installation#W64)
+document which describes how to install OpenSSL from a build.
+
+Before you do these instructions ActiveState Perl is needed. It has to
+be that, MYS2 is good but uses Unix paths and doesn't build the
+required Windows stuff.
+
+Here is the instructions from that document:
+
+* launch a Visual Studio tool x64 Cross Tools Command prompt
+* change to the directory where you have copied openssl sources `cd c:\myPath\openssl`
+* configure for the target OS with the command `perl Configure
+VC-WIN64A`
+ ** You may also be interested to set more configuration options as
+ documented in the general INSTALL note (for UNIX targets). For
+ instance: `perl Configure no-asm VC-WIN64A`.
+* prepare the target environment with the command: `ms\do_win64a`
+* ensure you start afresh and notably without linkable products from a
+  previous 32bit compile (as 32 and 64 bits compiling still share
+  common directories) with the command: `nmake -f ms\ntdll.mak clean`
+  for the DLL target and `nmake -f ms\nt.mak clean` for static
+  libraries.
+* build the code with: `nmake -f ms\ntdll.mak` (respectively `nmake -f ms\nt.mak`)
+* the artefacts will be found in sub directories `out32dll` and
+  `out32dll.dbg` (respectively out32 and out32.dbg for static
+  libraries). The libcrypto and ssl libraries are still named
+  libeay32.lib and ssleay32.lib, and associated includes in inc32 !
+  You may check this is true 64bit code using the Visual Studio tool
+  'dumpbin'. For instance dumpbin `/headers out32dll/libeay32.lib` |
+  more, and look at the FILE HEADER section.
+* test the code using the various *test.exe programs in out32dll. Use
+  the 'test' make target to run all tests as in `nmake -f ms\ntdll.mak test`
+  * we recommend that you move/copy needed includes and libraries from the "32" directories under a new explicit directory tree for 64bit applications from where you will import and link your target applications, similar to that explained in INSTALL.W32.
+
+After building the Windows build doesn't install anything properly so you need to:
+
+```
+mkdir /c/build/OpenSSL/lib
+mkdir /c/build/OpenSSL/bin
+cp out32dll/* /c/build/OpenSSL/bin
+cp out32dll/* /c/build/OpenSSL/lib
+cp -r include /c/build/OpenSSL/
+```
+
 ## running
 
 first you need to load your modules:
