@@ -153,6 +153,27 @@ I found
 [this](https://github.com/blackrosezy/build-libcurl-windows/blob/master/build.bat)
 and followed it and it seems to work ok.
 
+### modified build sequence
+
+Apparently the build sequence on Windows is just plain wrong in the docs you find online.
+
+I've got this:
+
+```
+C:> kBuild\envwin.cmd --win64
+C:> cscript configure.vbs  \
+    --with-mingw-w64=\sandbox\work\mingw64 \
+    --with-openssl=\sandbox\work\OpenSSL \
+    --with-libcurl=\sandbox\work\curl\lib \
+    --with-VC="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
+C:> kmk
+```
+
+I'm currently getting a build failure because of Python though. I do
+not want Python so I don't see why that is.
+
+Note: the env.bat seems to be not required and confuses the 64 bit
+build if it is used.
 
 ## importing OVF's
 
