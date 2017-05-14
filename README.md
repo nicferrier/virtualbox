@@ -36,13 +36,13 @@ This repository is my hacks on virtulabox to make that work.
 Seemingly this can be controlled with VboxManageAppliance.cpp where
 the image is imported. If the card is not NAT we could reject it.
 
-## to build
+## to build on Linux
 
 * [Vbox linux build instructions](https://www.virtualbox.org/wiki/Linux%20build%20instructions)
 * make sure you disable hardening to do dev builds, otherwise you can't run directly from build
 * builds end up in out/linux.amd64/release/bin
 
-## helping with logging
+### helping with logging
 
 * the RTPrintf function does a lot of logging
 * some things run inside the server with no logging by default
@@ -56,13 +56,38 @@ generally this means running this in one terminal and what you're
 doing in another.
 
 
-## handling Utf8 strings
+### handling Utf8 strings
 
 ```
 char *nicpsz = NULL;
 RTStrAPrintf(&nicpsz, "%s", strTargetPath.c_str());
 RTPrintf("import target path %s\n", nicpsz);
 RTStrFree(nicpsz);
+```
+
+### running
+
+first you need to load your modules:
+
+```
+cd out/linux.amd64/release/bin/src
+make
+sudo make install
+sudo make load
+```
+
+then you can run:
+
+```
+cd out/linux.amd64/release/bin/src
+./VBoxHeadless ...
+```
+
+and you can run the management tool:
+
+```
+cd out/linux.amd64/release/bin/src
+./VBoxManage --help
 ```
 
 ## to build for Windows 64
@@ -120,30 +145,14 @@ cp out32dll/* /c/build/OpenSSL/lib
 cp -r include /c/build/OpenSSL/
 ```
 
-## running
+### libcurl
 
-first you need to load your modules:
+Same deal for libcurl. Building it for what vbox expects is a hard problem.
 
-```
-cd out/linux.amd64/release/bin/src
-make
-sudo make install
-sudo make load
-```
+I found
+[this](https://github.com/blackrosezy/build-libcurl-windows/blob/master/build.bat)
+and followed it and it seems to work ok.
 
-then you can run:
-
-```
-cd out/linux.amd64/release/bin/src
-./VBoxHeadless ...
-```
-
-and you can run the management tool:
-
-```
-cd out/linux.amd64/release/bin/src
-./VBoxManage --help
-```
 
 ## importing OVF's
 
