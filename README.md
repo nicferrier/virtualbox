@@ -96,6 +96,12 @@ OMG this is so complicated.
 
 First get all the depends which means compiling OpenSSL at the right version.
 
+### Python
+
+This is needed because it's used by the build process, not because we
+build the python API.
+
+
 ### openssl 1.0.1
 
 I used git to checkout `1_0_1u` of openssl.
@@ -160,13 +166,16 @@ Apparently the build sequence on Windows is just plain wrong in the docs you fin
 I've got this:
 
 ```
-C:> kBuild\envwin.cmd --win64
-C:> cscript configure.vbs  \
+  C:> kBuild\envwin.cmd --win64
+  C:> cscript configure.vbs  \
     --with-mingw-w64=\sandbox\work\mingw64 \
     --with-openssl=\sandbox\work\OpenSSL \
     --with-libcurl=\sandbox\work\curl\lib \
     --with-VC="\Program Files (x86)\Microsoft Visual Studio 10.0\VC"
-C:> kmk
+  C:> "\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
+  C:> set PATH=%PATH%e:\sandbox\src\virtualbox\tools\win.amd64\bin
+  C:> set PATH=%PATH%;\sandbox\Python
+  C:> kmk
 ```
 
 I'm currently getting a build failure because of Python though. I do
