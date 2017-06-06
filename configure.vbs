@@ -2372,7 +2372,7 @@ Sub Main
    CheckForMinGWw64 strOptMinGWw64
    CfgPrint "VBOX_WITH_OPEN_WATCOM := " '' @todo look for openwatcom 1.9+
    EnvPrint "set PATH=%PATH%;" & g_strPath& "/tools/win." & g_strTargetArch & "/bin;" '' @todo look for yasm
-   CheckForlibSDL strOptlibSDL
+   ' CheckForlibSDL strOptlibSDL
    ' Don't check for these libraries by default as they are part of OSE
    ' Using external libs can add a dependency to iconv
    if (strOptXml2 <> "") then

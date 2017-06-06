@@ -293,6 +293,8 @@ RuntimeR3_INCS          = \
 	$(SDK_VBOX_ZLIB_INCS)
 RuntimeR3_INCS         += \
 	$(PATH_ROOT)/src/libs/liblzf-3.4
+RuntimeR3_INCS 	       += \
+	/sandbox/work/OpenSSL/include
 ifdef IPRT_WITH_KSTUFF
  RuntimeR3_INCS        += \
 	$(PATH_ROOT)/src/libs/kStuff/kStuff/include
@@ -1551,11 +1553,16 @@ ifndef SDK_VBOX_LIBXML2_LIBS
 endif
 VBoxRT_LIBS                  += \
 	$(SDK_VBOX_ZLIB_LIBS)
-ifndef SDK_VBOX_OPENSSL_LIBS
- VBoxRT_LIBS                 += \
-	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
-	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
-endif
+
+# ifndef SDK_VBOX_OPENSSL_LIBS
+#  VBoxRT_LIBS                 += \
+# 	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
+# 	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
+# endif
+
+VBoxRT_LIBS += \
+	$(SDK_VBOX_OPENSSL_LIBS)
+
 ifdef IPRT_WITH_LZO
  VBoxRT_LIBS                  += lzo2
 endif
@@ -1703,11 +1710,13 @@ ifndef SDK_VBOX_LIBXML2_LIBS
 endif
 VBoxRT-x86_LIBS                  += \
 	$(SDK_VBOX_ZLIB_LIBS-x86)
-ifndef SDK_VBOX_OPENSSL_LIBS
- VBoxRT-x86_LIBS                 += \
-	$(PATH_STAGE_LIB)/VBox-libcrypto-x86$(VBOX_SUFF_LIB) \
-	$(PATH_STAGE_LIB)/VBox-libssl-x86$(VBOX_SUFF_LIB)
-endif
+
+# ifndef SDK_VBOX_OPENSSL_LIBS
+#  VBoxRT-x86_LIBS                 += \
+# 	$(PATH_STAGE_LIB)/VBox-libcrypto-x86$(VBOX_SUFF_LIB) \
+# 	$(PATH_STAGE_LIB)/VBox-libssl-x86$(VBOX_SUFF_LIB)
+# endif
+
 ifdef IPRT_WITH_LZO
  VBoxRT-x86_LIBS                  += lzo2
 endif

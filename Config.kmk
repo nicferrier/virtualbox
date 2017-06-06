@@ -1744,7 +1744,7 @@ endif
 ifndef VBOX_BLD_PYTHON
  if1of ($(KBUILD_HOST), win)
   VBOX_BLD_PYTHON := $(firstword $(rsort $(wildcard $(KBUILD_DEVTOOLS)/win.x86/python/v*/python$(HOSTSUFF_EXE))) \
-  				   python-not-found.exe)
+	  				   python-not-found.exe)
  else
   VBOX_BLD_PYTHON := $(firstword $(which python2.7$(HOSTSUFF_EXE)) $(which python2.6$(HOSTSUFF_EXE)) \
                                  $(which python$(HOSTSUFF_EXE)) $(which python3$(HOSTSUFF_EXE)) \
@@ -1947,7 +1947,8 @@ else
 endif
 
 ifeq ($(KBUILD_HOST),win)
- VBOX_NM ?= $(PATH_TOOL_MINGW32)/bin/nm.exe -p
+# VBOX_NM ?= $(PATH_TOOL_MINGW64)/bin/nm.exe -p
+ VBOX_NM ?= /sandbox/work/mingw64/bin/nm.exe -p
 else ifeq ($(KBUILD_HOST),darwin) # Xcode 7.3.1 nm doesn't like -t, and -x behaves very differently.  Throwing in -B (bsd) to make sure.
  VBOX_NM ?= $(TOOL_$(VBOX_GCC_TOOL)_ENV_SETUP) $(PATH_TOOL_$(VBOX_GCC_TOOL)_TOOLCHAIN_BIN_SLASH)nm -p $(if-expr \
  	$(VBOX_XCODE_VERSION_MAJOR) > 7 || ($(VBOX_XCODE_VERSION_MAJOR) == 7 && $(VBOX_XCODE_VERSION_MINOR) >= 3),-B,)
@@ -3695,16 +3696,23 @@ if "$(SDK_VBOX_OPENSSL_INCS)" == "$(SDK_VBOX_OPENSSL_VBOX_DEFAULT_INCS)"
  SDK_VBOX_OPENSSL2_LIBS = $(NO_SUCH_VARIABLE)
 endif
 
+# this makes no sense because the build gets passed the curl lib
 ifdef VBOX_WITH_LIBCURL
 SDK_VBOX_LIBCURL       = .
-SDK_VBOX_LIBCURL_INCS ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
-SDK_VBOX_LIBCURL_LIBS ?= $(PATH_STAGE_LIB)/VBox-libcurl$(VBOX_SUFF_LIB)
-SDK_VBOX_LIBCURL_DEFS ?= BUILDING_LIBCURL
+#SDK_VBOX_LIBCURL_INCS ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
+#SDK_VBOX_LIBCURL_LIBS ?= $(PATH_STAGE_LIB)/VBox-libcurl$(VBOX_SUFF_LIB)
+#SDK_VBOX_LIBCURL_DEFS ?= BUILDING_LIBCURL
 
-SDK_VBOX_LIBCURL-x86           = .
-SDK_VBOX_LIBCURL-x86_INCS     ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
-SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(PATH_STAGE_LIB)/VBox-libcurl-x86$(VBOX_SUFF_LIB)
-SDK_VBOX_LIBCURL-x86_DEFS     ?= BUILDING_LIBCURL
+# Just make the x86 ones the same as the main ones
+SDK_VBOX_LIBCURL-x86           = $(SDK_VBOX_LIBCURL)
+SDK_VBOX_LIBCURL-x86_INCS     ?= $(SDK_VBOX_LIBCURL_INCS)
+SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(SDK_VBOX_LIBCURL_LIBS)
+SDK_VBOX_LIBCURL-x86_DEFS     ?= $(SDK_VBOX_LIBCURL_DEFS)
+
+# SDK_VBOX_LIBCURL-x86           = $(SDK_VBOX_LIBCURL)
+# SDK_VBOX_LIBCURL-x86_INCS     ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
+# SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(PATH_STAGE_LIB)/VBox-libcurl-x86$(VBOX_SUFF_LIB)
+# SDK_VBOX_LIBCURL-x86_DEFS     ?= BUILDING_LIBCURL
 endif
 
 SDK_VBOX_VPX       = .
@@ -4862,11 +4870,13 @@ else
 endif
 TEMPLATE_VBoxR3Static_LIBS         += \
  	$(VBOX_LIB_RUNTIME_STATIC)
-ifndef SDK_VBOX_OPENSSL_LIBS
- TEMPLATE_VBoxR3Static_LIBS        += \
- 	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
- 	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
-endif
+
+#ifndef SDK_VBOX_OPENSSL_LIBS
+# TEMPLATE_VBoxR3Static_LIBS        += \
+# 	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
+# 	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
+#endif
+
 ifndef SDK_VBOX_LIBXML2_LIBS
  TEMPLATE_VBoxR3Static_LIBS        += \
  	$(PATH_STAGE_LIB)/VBox-libxml2-static$(VBOX_SUFF_LIB)
