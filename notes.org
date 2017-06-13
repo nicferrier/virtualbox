@@ -1,0 +1,2 @@
+* suddenly it says mspdb100.dll is missing
+

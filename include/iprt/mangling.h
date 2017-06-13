@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright (C) 2011-2016 Oracle Corporation
+ * Copyright (C) 2011-2017 Oracle Corporation
  *
  * This file is part of VirtualBox Open Source Edition (OSE), as
  * available from http://www.virtualbox.org. This file is free software;
@@ -356,6 +356,10 @@
 # define ASMXRstor_EndProc                              RT_MANGLER(ASMXRstor_EndProc)
 # define ASMXSave                                       RT_MANGLER(ASMXSave)
 # define ASMXSave_EndProc                               RT_MANGLER(ASMXSave_EndProc)
+# define ASMFxRstor                                     RT_MANGLER(ASMFxRstor)
+# define ASMFxRstor_EndProc                             RT_MANGLER(ASMFxRstor_EndProc)
+# define ASMFxSave                                      RT_MANGLER(ASMFxSave)
+# define ASMFxSave_EndProc                              RT_MANGLER(ASMFxSave_EndProc)
 
 # define RTAssertAreQuiet                               RT_MANGLER(RTAssertAreQuiet)
 # define RTAssertMayPanic                               RT_MANGLER(RTAssertMayPanic)
@@ -594,6 +598,8 @@
 # define RTCircBufFree                                  RT_MANGLER(RTCircBufFree)
 # define RTCircBufIsReading                             RT_MANGLER(RTCircBufIsReading)
 # define RTCircBufIsWriting                             RT_MANGLER(RTCircBufIsWriting)
+# define RTCircBufOffsetRead                            RT_MANGLER(RTCircBufOffsetRead)
+# define RTCircBufOffsetWrite                           RT_MANGLER(RTCircBufOffsetWrite)
 # define RTCircBufReleaseReadBlock                      RT_MANGLER(RTCircBufReleaseReadBlock)
 # define RTCircBufReleaseWriteBlock                     RT_MANGLER(RTCircBufReleaseWriteBlock)
 # define RTCircBufReset                                 RT_MANGLER(RTCircBufReset)
@@ -1359,6 +1365,8 @@
 # define RTNetIPv6PseudoChecksum                        RT_MANGLER(RTNetIPv6PseudoChecksum)
 # define RTNetIPv6PseudoChecksumBits                    RT_MANGLER(RTNetIPv6PseudoChecksumBits)
 # define RTNetIPv6PseudoChecksumEx                      RT_MANGLER(RTNetIPv6PseudoChecksumEx)
+# define RTNetMaskToPrefixIPv4                          RT_MANGLER(RTNetMaskToPrefixIPv4)
+# define RTNetPrefixToMaskIPv4                          RT_MANGLER(RTNetPrefixToMaskIPv4)
 # define RTNetTCPChecksum                               RT_MANGLER(RTNetTCPChecksum)
 # define RTNetUDPChecksum                               RT_MANGLER(RTNetUDPChecksum)
 # define RTNetStrToMacAddr                              RT_MANGLER(RTNetStrToMacAddr)
@@ -1834,6 +1842,7 @@
 # define RTStrHash1ExNV                                 RT_MANGLER(RTStrHash1ExNV)
 # define RTStrHash1N                                    RT_MANGLER(RTStrHash1N)
 # define RTStrICmp                                      RT_MANGLER(RTStrICmp)
+# define RTStrICmpAscii                                 RT_MANGLER(RTStrICmpAscii)
 # define RTStrIStartsWith                               RT_MANGLER(RTStrIStartsWith)
 # define RTStrIStr                                      RT_MANGLER(RTStrIStr)
 # define RTStrIsCaseFoldable                            RT_MANGLER(RTStrIsCaseFoldable)

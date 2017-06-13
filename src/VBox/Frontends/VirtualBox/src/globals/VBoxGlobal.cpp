@@ -232,6 +232,7 @@ VBoxGlobal::VBoxGlobal()
     , m_fVBoxSVCAvailable(true)
     , m_fSeparateProcess(false)
     , m_pMediumEnumerator(0)
+    , m_fEPInstallationRequested(false)
 #ifdef VBOX_WS_X11
     , m_fCompositingManagerRunning(false)
     , m_enmWindowManagerType(X11WMType_Unknown)
@@ -1254,7 +1255,7 @@ QString VBoxGlobal::detailsReport (const CMachine &aMachine, bool aWithLinks)
     {
         QString item;
 
-        ulong count = m_vbox.GetSystemProperties().GetMaxNetworkAdapters(KChipsetType_PIIX3);
+        ulong count = m_vbox.GetSystemProperties().GetMaxNetworkAdapters(aMachine.GetChipsetType());
         int rows = 2; /* including section header and footer */
         for (ulong slot = 0; slot < count; slot ++)
         {
@@ -3382,10 +3383,54 @@ void VBoxGlobal::setFullScreenFlag(QWidget *pWidget)
     Atom net_wm_state = XInternAtom(pDisplay, "_NET_WM_STATE", True /* only if exists */);
     Atom net_wm_state_fullscreen = XInternAtom(pDisplay, "_NET_WM_STATE_FULLSCREEN", True /* only if exists */);
 
-    /* Append resultNetWmState with full-screen flag if necessary: */
+    /* Append resultNetWmState with fullscreen flag if necessary: */
     if (!resultNetWmState.contains(net_wm_state_fullscreen))
     {
         resultNetWmState.append(net_wm_state_fullscreen);
+        /* Apply property to widget again: */
+        XChangeProperty(pDisplay, pWidget->window()->winId(),
+                        net_wm_state, XA_ATOM, 32, PropModeReplace,
+                        (unsigned char*)resultNetWmState.data(), resultNetWmState.size());
+    }
+}
+
+/* static */
+void VBoxGlobal::setSkipTaskBarFlag(QWidget *pWidget)
+{
+    /* Get display: */
+    Display *pDisplay = QX11Info::display();
+
+    /* Prepare atoms: */
+    QVector<Atom> resultNetWmState = flagsNetWmState(pWidget);
+    Atom net_wm_state = XInternAtom(pDisplay, "_NET_WM_STATE", True /* only if exists */);
+    Atom net_wm_state_skip_taskbar = XInternAtom(pDisplay, "_NET_WM_STATE_SKIP_TASKBAR", True /* only if exists */);
+
+    /* Append resultNetWmState with skip-taskbar flag if necessary: */
+    if (!resultNetWmState.contains(net_wm_state_skip_taskbar))
+    {
+        resultNetWmState.append(net_wm_state_skip_taskbar);
+        /* Apply property to widget again: */
+        XChangeProperty(pDisplay, pWidget->window()->winId(),
+                        net_wm_state, XA_ATOM, 32, PropModeReplace,
+                        (unsigned char*)resultNetWmState.data(), resultNetWmState.size());
+    }
+}
+
+/* static */
+void VBoxGlobal::setSkipPagerFlag(QWidget *pWidget)
+{
+    /* Get display: */
+    Display *pDisplay = QX11Info::display();
+
+    /* Prepare atoms: */
+    QVector<Atom> resultNetWmState = flagsNetWmState(pWidget);
+    Atom net_wm_state = XInternAtom(pDisplay, "_NET_WM_STATE", True /* only if exists */);
+    Atom net_wm_state_skip_pager = XInternAtom(pDisplay, "_NET_WM_STATE_SKIP_PAGER", True /* only if exists */);
+
+    /* Append resultNetWmState with skip-pager flag if necessary: */
+    if (!resultNetWmState.contains(net_wm_state_skip_pager))
+    {
+        resultNetWmState.append(net_wm_state_skip_pager);
         /* Apply property to widget again: */
         XChangeProperty(pDisplay, pWidget->window()->winId(),
                         net_wm_state, XA_ATOM, 32, PropModeReplace,
@@ -3904,6 +3949,9 @@ void VBoxGlobal::prepare()
     m_osRelease = determineOsRelease();
 #endif /* VBOX_WS_MAC */
 
+    /* Prepare converter: */
+    UIConverter::prepare();
+
     /* Create desktop-widget watchdog: */
     UIDesktopWidgetWatchdog::create();
 
@@ -4284,9 +4332,6 @@ void VBoxGlobal::prepare()
 #endif
 
     mValid = true;
-
-    /* Prepare converter: */
-    UIConverter::prepare();
 
     /* Create medium-enumerator but don't do any immediate caching: */
     m_pMediumEnumerator = new UIMediumEnumerator;

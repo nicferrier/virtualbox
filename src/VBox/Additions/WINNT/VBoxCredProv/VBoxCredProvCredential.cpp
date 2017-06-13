@@ -4,7 +4,7 @@
  */
 
 /*
- * Copyright (C) 2012-2016 Oracle Corporation
+ * Copyright (C) 2012-2017 Oracle Corporation
  *
  * This file is part of VirtualBox Open Source Edition (OSE), as
  * available from http://www.virtualbox.org. This file is free software;
@@ -125,7 +125,7 @@ HRESULT VBoxCredProvCredential::QueryInterface(REFIID interfaceID, void **ppvInt
 HRESULT VBoxCredProvCredential::RTUTF16ToUnicode(PUNICODE_STRING pUnicodeDest, PRTUTF16 pwszSource, bool fCopy)
 {
     AssertPtrReturn(pUnicodeDest, E_POINTER);
-    AssertPtrReturn(pwszSource, E_POINTER);
+    AssertPtrReturn(pwszSource,   E_POINTER);
 
     size_t cbLen = RTUtf16Len(pwszSource) * sizeof(RTUTF16);
     AssertReturn(cbLen <= USHORT_MAX, E_INVALIDARG);
@@ -154,11 +154,74 @@ HRESULT VBoxCredProvCredential::RTUTF16ToUnicode(PUNICODE_STRING pUnicodeDest, P
 }
 
 
-HRESULT VBoxCredProvCredential::kerberosLogonInit(KERB_INTERACTIVE_LOGON *pLogonIn,
-                                                  CREDENTIAL_PROVIDER_USAGE_SCENARIO enmUsage,
-                                                  PRTUTF16 pwszUser, PRTUTF16 pwszPassword, PRTUTF16 pwszDomain)
+/**
+ * Copies an UTF16 string into a PUNICODE_STRING by allocating space for it.
+ *
+ * @return  HRESULT
+ * @param   pUnicodeDest        Where to store the copied (allocated) unicode string.
+ * @param   pwszSource          UTF16 string to copy.
+ */
+HRESULT VBoxCredProvCredential::RTUTF16ToUnicodeA(PUNICODE_STRING pUnicodeDest, PRTUTF16 pwszSource)
 {
-    AssertPtrReturn(pLogonIn,     E_INVALIDARG);
+    AssertPtrReturn(pUnicodeDest, E_POINTER);
+    AssertPtrReturn(pwszSource,   E_POINTER);
+
+    size_t cbLen = RTUtf16Len(pwszSource) * sizeof(RTUTF16);
+
+    pUnicodeDest->Buffer = (LPWSTR)CoTaskMemAlloc(cbLen);
+
+    if (!pUnicodeDest->Buffer)
+        return E_OUTOFMEMORY;
+
+    pUnicodeDest->MaximumLength = (USHORT)cbLen;
+    pUnicodeDest->Length        = 0;
+
+    return RTUTF16ToUnicode(pUnicodeDest, pwszSource, true /* fCopy */);
+}
+
+
+/**
+ * Frees a formerly allocated PUNICODE_STRING.
+ *
+ * @param   pUnicode            String to free.
+ */
+void VBoxCredProvCredential::UnicodeStringFree(PUNICODE_STRING pUnicode)
+{
+    if (!pUnicode)
+        return;
+
+    if (pUnicode->Buffer)
+    {
+        Assert(pUnicode->MaximumLength);
+
+        /* Make sure to wipe contents before free'ing. */
+        RTMemWipeThoroughly(pUnicode->Buffer, pUnicode->MaximumLength /* MaximumLength is bytes! */, 3 /* Passes */);
+
+        CoTaskMemFree(pUnicode->Buffer);
+        pUnicode->Buffer = NULL;
+    }
+
+    pUnicode->Length        = 0;
+    pUnicode->MaximumLength = 0;
+}
+
+
+/**
+ * Creates a KERB_INTERACTIVE_LOGON structure with the given parameters.
+ * Must be destroyed with kerberosLogonDestroy().
+ *
+ * @return  HRESULT
+ * @param   pLogon              Structure to create.
+ * @param   enmUsage            Intended usage of the structure.
+ * @param   pwszUser            User name to use.
+ * @param   pwszPassword        Password to use.
+ * @param   pwszDomain          Domain to use. Optional and can be NULL.
+ */
+HRESULT VBoxCredProvCredential::kerberosLogonCreate(KERB_INTERACTIVE_LOGON *pLogon,
+                                                    CREDENTIAL_PROVIDER_USAGE_SCENARIO enmUsage,
+                                                    PRTUTF16 pwszUser, PRTUTF16 pwszPassword, PRTUTF16 pwszDomain)
+{
+    AssertPtrReturn(pLogon,       E_INVALIDARG);
     AssertPtrReturn(pwszUser,     E_INVALIDARG);
     AssertPtrReturn(pwszPassword, E_INVALIDARG);
     /* pwszDomain is optional. */
@@ -169,7 +232,7 @@ HRESULT VBoxCredProvCredential::kerberosLogonInit(KERB_INTERACTIVE_LOGON *pLogon
     if (   pwszDomain
         && RTUtf16Len(pwszDomain))
     {
-        hr = RTUTF16ToUnicode(&pLogonIn->LogonDomainName, pwszDomain, true /* fCopy */);
+        hr = RTUTF16ToUnicodeA(&pLogon->LogonDomainName, pwszDomain);
     }
     else /* No domain (FQDN) given, try local computer name. */
     {
@@ -178,7 +241,7 @@ HRESULT VBoxCredProvCredential::kerberosLogonInit(KERB_INTERACTIVE_LOGON *pLogon
         if (GetComputerNameW(wszComputerName, &cch))
         {
             /* Is a domain name missing? Then use the name of the local computer. */
-            hr = RTUTF16ToUnicode(&pLogonIn->LogonDomainName, wszComputerName, true /* fCopy */);
+            hr = RTUTF16ToUnicodeA(&pLogon->LogonDomainName, wszComputerName);
 
             VBoxCredProvVerbose(0, "VBoxCredProvCredential::kerberosLogonInit: Local computer name=%ls\n",
                                 wszComputerName);
@@ -190,25 +253,25 @@ HRESULT VBoxCredProvCredential::kerberosLogonInit(KERB_INTERACTIVE_LOGON *pLogon
     /* Fill in the username and password. */
     if (SUCCEEDED(hr))
     {
-        hr = RTUTF16ToUnicode(&pLogonIn->UserName, pwszUser, true /* fCopy */);
+        hr = RTUTF16ToUnicodeA(&pLogon->UserName, pwszUser);
         if (SUCCEEDED(hr))
         {
-            hr = RTUTF16ToUnicode(&pLogonIn->Password, pwszPassword, true /* fCopy */);
+            hr = RTUTF16ToUnicodeA(&pLogon->Password, pwszPassword);
             if (SUCCEEDED(hr))
             {
                 /* Set credential type according to current usage scenario. */
                 switch (enmUsage)
                 {
                     case CPUS_UNLOCK_WORKSTATION:
-                        pLogonIn->MessageType = KerbWorkstationUnlockLogon;
+                        pLogon->MessageType = KerbWorkstationUnlockLogon;
                         break;
 
                     case CPUS_LOGON:
-                        pLogonIn->MessageType = KerbInteractiveLogon;
+                        pLogon->MessageType = KerbInteractiveLogon;
                         break;
 
                     case CPUS_CREDUI:
-                        pLogonIn->MessageType = (KERB_LOGON_SUBMIT_TYPE)0; /* No message type required here. */
+                        pLogon->MessageType = (KERB_LOGON_SUBMIT_TYPE)0; /* No message type required here. */
                         break;
 
                     default:
@@ -225,6 +288,22 @@ HRESULT VBoxCredProvCredential::kerberosLogonInit(KERB_INTERACTIVE_LOGON *pLogon
 }
 
 
+/**
+ * Destroys a formerly created KERB_INTERACTIVE_LOGON structure.
+ *
+ * @param   pLogon              Structure to destroy.
+ */
+void VBoxCredProvCredential::kerberosLogonDestroy(KERB_INTERACTIVE_LOGON *pLogon)
+{
+    if (!pLogon)
+        return;
+
+    UnicodeStringFree(&pLogon->UserName);
+    UnicodeStringFree(&pLogon->Password);
+    UnicodeStringFree(&pLogon->LogonDomainName);
+}
+
+
 HRESULT VBoxCredProvCredential::kerberosLogonSerialize(const KERB_INTERACTIVE_LOGON *pLogonIn,
                                                        PBYTE *ppPackage, DWORD *pcbPackage)
 {
@@ -238,18 +317,21 @@ HRESULT VBoxCredProvCredential::kerberosLogonSerialize(const KERB_INTERACTIVE_LO
      * credentials.
      */
     DWORD cbLogon = sizeof(KERB_INTERACTIVE_UNLOCK_LOGON)
-                  + pLogonIn->LogonDomainName.Length +
-                  + pLogonIn->UserName.Length +
+                  + pLogonIn->LogonDomainName.Length
+                  + pLogonIn->UserName.Length
                   + pLogonIn->Password.Length;
 
-#ifdef DEBUG
-    VBoxCredProvVerbose(3, "VBoxCredProvCredential::AllocateLogonPackage: Allocating %ld bytes (%d bytes credentials)\n",
+#ifdef DEBUG /* Do not reveal any hints to credential data in release mode. */
+    VBoxCredProvVerbose(1, "VBoxCredProvCredential::AllocateLogonPackage: Allocating %ld bytes (%zu bytes credentials)\n",
                         cbLogon, cbLogon - sizeof(KERB_INTERACTIVE_UNLOCK_LOGON));
 #endif
 
     KERB_INTERACTIVE_UNLOCK_LOGON *pLogon = (KERB_INTERACTIVE_UNLOCK_LOGON*)CoTaskMemAlloc(cbLogon);
     if (!pLogon)
         return E_OUTOFMEMORY;
+
+    /* Make sure to zero everything first. */
+    RT_BZERO(pLogon, cbLogon);
 
     /* Let our byte buffer point to the end of our allocated structure so that it can
      * be used to store the credential data sequentially in a binary blob
@@ -259,17 +341,19 @@ HRESULT VBoxCredProvCredential::kerberosLogonSerialize(const KERB_INTERACTIVE_LO
     /* The buffer of the packed destination string does not contain the actual
      * string content but a relative offset starting at the given
      * KERB_INTERACTIVE_UNLOCK_LOGON structure. */
-#define KERB_CRED_INIT_PACKED(StringDst, StringSrc, LogonOffset)         \
-    StringDst.Length         = StringSrc.Length;                         \
-    StringDst.MaximumLength  = StringSrc.Length;                         \
-    StringDst.Buffer         = (PWSTR)pbBuffer;                          \
-    memcpy(StringDst.Buffer, StringSrc.Buffer, StringDst.Length);        \
-    StringDst.Buffer         = (PWSTR)(pbBuffer - (PBYTE)LogonOffset);   \
-    pbBuffer                += StringDst.Length;
-
-    RT_BZERO(&pLogon->LogonId, sizeof(LUID));
+#define KERB_CRED_INIT_PACKED(StringDst, StringSrc, LogonOffset)             \
+    StringDst.Length         = StringSrc.Length;                             \
+    StringDst.MaximumLength  = StringSrc.Length;                             \
+    if (StringDst.Length)                                                    \
+    {                                                                        \
+        StringDst.Buffer         = (PWSTR)pbBuffer;                          \
+        memcpy(StringDst.Buffer, StringSrc.Buffer, StringDst.Length);        \
+        StringDst.Buffer         = (PWSTR)(pbBuffer - (PBYTE)LogonOffset);   \
+        pbBuffer                += StringDst.Length;                         \
+    }
 
     KERB_INTERACTIVE_LOGON *pLogonOut = &pLogon->Logon;
+
     pLogonOut->MessageType = pLogonIn->MessageType;
 
     KERB_CRED_INIT_PACKED(pLogonOut->LogonDomainName, pLogonIn->LogonDomainName, pLogon);
@@ -907,7 +991,6 @@ HRESULT VBoxCredProvCredential::GetSerialization(CREDENTIAL_PROVIDER_GET_SERIALI
 
     /* Save a pointer to the interactive logon struct. */
     KERB_INTERACTIVE_LOGON *pLogon = &KerberosUnlockLogon.Logon;
-    AssertPtr(pLogon);
 
 #ifdef DEBUG /* Note: NEVER print this in release mode! */
     VBoxCredProvVerbose(0, "VBoxCredProvCredential::GetSerialization: Username=%ls, Password=%ls, Domain=%ls\n",
@@ -916,11 +999,11 @@ HRESULT VBoxCredProvCredential::GetSerialization(CREDENTIAL_PROVIDER_GET_SERIALI
                         m_apwszCredentials[VBOXCREDPROV_FIELDID_DOMAINNAME]);
 #endif
 
-    HRESULT hr = kerberosLogonInit(pLogon,
-                                   m_enmUsageScenario,
-                                   m_apwszCredentials[VBOXCREDPROV_FIELDID_USERNAME],
-                                   m_apwszCredentials[VBOXCREDPROV_FIELDID_PASSWORD],
-                                   m_apwszCredentials[VBOXCREDPROV_FIELDID_DOMAINNAME]);
+    HRESULT hr = kerberosLogonCreate(pLogon,
+                                     m_enmUsageScenario,
+                                     m_apwszCredentials[VBOXCREDPROV_FIELDID_USERNAME],
+                                     m_apwszCredentials[VBOXCREDPROV_FIELDID_PASSWORD],
+                                     m_apwszCredentials[VBOXCREDPROV_FIELDID_DOMAINNAME]);
     if (SUCCEEDED(hr))
     {
         hr = kerberosLogonSerialize(pLogon,
@@ -959,6 +1042,10 @@ HRESULT VBoxCredProvCredential::GetSerialization(CREDENTIAL_PROVIDER_GET_SERIALI
 
                             /* We're done -- let the logon UI know. */
                             *pcpGetSerializationResponse = CPGSR_RETURN_CREDENTIAL_FINISHED;
+
+                            VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization: Finished for user '%ls' (domain '%s')\n",
+                                                m_apwszCredentials[VBOXCREDPROV_FIELDID_USERNAME],
+                                                m_apwszCredentials[VBOXCREDPROV_FIELDID_DOMAINNAME]);
                         }
                         else
                             VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization: LsaLookupAuthenticationPackage failed with ntStatus=%ld\n", s);
@@ -972,11 +1059,14 @@ HRESULT VBoxCredProvCredential::GetSerialization(CREDENTIAL_PROVIDER_GET_SERIALI
         }
         else
             VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization: kerberosLogonSerialize failed with hr=0x%08x\n", hr);
+
+        kerberosLogonDestroy(pLogon);
+        pLogon = NULL;
     }
     else
-        VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization: kerberosLogonInit failed with hr=0x%08x\n", hr);
+        VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization: kerberosLogonCreate failed with hr=0x%08x\n", hr);
 
-    VBoxCredProvVerbose(0, "VBoxCredProvCredential::GetSerialization returned hr=0x%08x\n", hr);
+    VBoxCredProvVerbose(1, "VBoxCredProvCredential::GetSerialization returned hr=0x%08x\n", hr);
     return hr;
 }
 

@@ -96,10 +96,12 @@ int vmR3EmulationThreadWithId(RTTHREAD hThreadSelf, PUVMCPU pUVCpu, VMCPUID idCp
     for (;;)
     {
         /*
-         * During early init there is no pVM, so make a special path
+         * During early init there is no pVM and/or pVCpu, so make a special path
          * for that to keep things clearly separate.
          */
-        if (!pUVM->pVM)
+        PVM    pVM   = pUVM->pVM;
+        PVMCPU pVCpu = pUVCpu->pVCpu;
+        if (!pVCpu || !pVM)
         {
             /*
              * Check for termination first.
@@ -153,8 +155,6 @@ int vmR3EmulationThreadWithId(RTTHREAD hThreadSelf, PUVMCPU pUVCpu, VMCPUID idCp
              * We check for state changes in addition to status codes when
              * servicing requests. (Look after the ifs.)
              */
-            PVM    pVM   = pUVM->pVM;
-            PVMCPU pVCpu = pUVCpu->pVCpu;
             enmBefore = pVM->enmVMState;
             if (pUVM->vm.s.fTerminateEMT)
             {
@@ -227,16 +227,18 @@ int vmR3EmulationThreadWithId(RTTHREAD hThreadSelf, PUVMCPU pUVCpu, VMCPUID idCp
          * or start the VM, in that case we'll get a change in VM status
          * indicating that we're now running.
          */
-        if (    RT_SUCCESS(rc)
-            &&  pUVM->pVM)
+        if (RT_SUCCESS(rc))
         {
-            PVM     pVM   = pUVM->pVM;
-            PVMCPU  pVCpu = &pVM->aCpus[idCpu];
-            if (    pVM->enmVMState == VMSTATE_RUNNING
-                &&  VMCPUSTATE_IS_STARTED(VMCPU_GET_STATE(pVCpu)))
+            pVM = pUVM->pVM;
+            if (pVM)
             {
-                rc = EMR3ExecuteVM(pVM, pVCpu);
-                Log(("vmR3EmulationThread: EMR3ExecuteVM() -> rc=%Rrc, enmVMState=%d\n", rc, pVM->enmVMState));
+                pVCpu = &pVM->aCpus[idCpu];
+                if (   pVM->enmVMState == VMSTATE_RUNNING
+                    && VMCPUSTATE_IS_STARTED(VMCPU_GET_STATE(pVCpu)))
+                {
+                    rc = EMR3ExecuteVM(pVM, pVCpu);
+                    Log(("vmR3EmulationThread: EMR3ExecuteVM() -> rc=%Rrc, enmVMState=%d\n", rc, pVM->enmVMState));
+                }
             }
         }
 
@@ -248,15 +250,29 @@ int vmR3EmulationThreadWithId(RTTHREAD hThreadSelf, PUVMCPU pUVCpu, VMCPUID idCp
      */
     Log(("vmR3EmulationThread: Terminating emulation thread! Thread=%#x pUVM=%p rc=%Rrc enmBefore=%d enmVMState=%d\n",
          hThreadSelf, pUVM, rc, enmBefore, pUVM->pVM ? pUVM->pVM->enmVMState : VMSTATE_TERMINATED));
+    PVM pVM;
     if (   idCpu == 0
-        && pUVM->pVM)
+        && (pVM = pUVM->pVM) != NULL)
     {
-        PVM pVM = pUVM->pVM;
+        /* Wait for any other EMTs to terminate before we destroy the VM (see vmR3DestroyVM). */
+        for (VMCPUID iCpu = 1; iCpu < pUVM->cCpus; iCpu++)
+        {
+            RTTHREAD hThread;
+            ASMAtomicXchgHandle(&pUVM->aCpus[iCpu].vm.s.ThreadEMT, NIL_RTTHREAD, &hThread);
+            if (hThread != NIL_RTTHREAD)
+            {
+                int rc2 = RTThreadWait(hThread, 5 * RT_MS_1SEC, NULL);
+                AssertLogRelMsgRC(rc2, ("iCpu=%u rc=%Rrc\n", iCpu, rc2));
+                if (RT_FAILURE(rc2))
+                    pUVM->aCpus[iCpu].vm.s.ThreadEMT = hThread;
+            }
+        }
+
+        /* Switch to the terminated state, clearing the VM pointer and finally destroy the VM. */
         vmR3SetTerminated(pVM);
+
         pUVM->pVM = NULL;
 
-        /** @todo SMP: This isn't 100% safe. We should wait for the other
-         *        threads to finish before destroy the VM. */
         int rc2 = SUPR3CallVMMR0Ex(pVM->pVMR0, 0 /*idCpu*/, VMMR0_DO_GVMM_DESTROY_VM, 0, NULL);
         AssertLogRelRC(rc2);
     }

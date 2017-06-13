@@ -37,7 +37,7 @@ else # ! KBUILD_EXTMOD
 KBUILD_VERBOSE =
 
 all:
-	@echo "*** Building 'vboxdrv' module ***"
+	@echo "=== Building 'vboxdrv' module ==="
 	@$(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxdrv
 	@cp vboxdrv/vboxdrv.ko .
 	@echo
@@ -45,8 +45,8 @@ all:
 	    if [ -f vboxdrv/Module.symvers ]; then \
 	        cp vboxdrv/Module.symvers vboxnetflt; \
 	    fi; \
-	    echo "*** Building 'vboxnetflt' module ***"; \
-	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxnetflt; \
+	    echo "=== Building 'vboxnetflt' module ==="; \
+	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxnetflt || exit 1; \
 	    cp vboxnetflt/vboxnetflt.ko .; \
 	    echo; \
 	fi
@@ -54,8 +54,8 @@ all:
 	    if [ -f vboxdrv/Module.symvers ]; then \
 	        cp vboxdrv/Module.symvers vboxnetadp; \
 	    fi; \
-	    echo "*** Building 'vboxnetadp' module ***"; \
-	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxnetadp; \
+	    echo "=== Building 'vboxnetadp' module ==="; \
+	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxnetadp || exit 1; \
 	    cp vboxnetadp/vboxnetadp.ko .; \
 	    echo; \
 	fi
@@ -63,8 +63,8 @@ all:
 	    if [ -f vboxdrv/Module.symvers ]; then \
 	        cp vboxdrv/Module.symvers vboxpci; \
 	    fi; \
-	    echo "*** Building 'vboxpci' module ***"; \
-	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxpci; \
+	    echo "=== Building 'vboxpci' module ==="; \
+	    $(MAKE) KBUILD_VERBOSE=$(KBUILD_VERBOSE) -C vboxpci || exit 1; \
 	    cp vboxpci/vboxpci.ko .; \
 	    echo; \
 	fi

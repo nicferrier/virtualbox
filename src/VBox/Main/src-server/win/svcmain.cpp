@@ -40,7 +40,7 @@
 #include <iprt/path.h>
 #include <iprt/getopt.h>
 #include <iprt/message.h>
-#include <iprt\asm.h>
+#include <iprt/asm.h>
 
 class CExeModule : public ATL::CComModule
 {
@@ -143,7 +143,7 @@ BEGIN_OBJECT_MAP(ObjectMap)
     OBJECT_ENTRY(CLSID_VirtualBox, VirtualBox)
 END_OBJECT_MAP()
 
-CExeModule _Module;
+CExeModule* g_pModule = NULL;
 HWND g_hMainWindow = NULL;
 HINSTANCE g_hInstance = NULL;
 #define MAIN_WND_CLASS L"VirtualBox Interface"
@@ -152,14 +152,14 @@ HINSTANCE g_hInstance = NULL;
 * Wrapper for Win API function ShutdownBlockReasonCreate
 * This function defined starting from Vista only.
 */
-BOOL ShutdownBlockReasonCreateAPI(HWND hWnd,LPCWSTR pwszReason)
+static BOOL ShutdownBlockReasonCreateAPI(HWND hWnd, LPCWSTR pwszReason)
 {
     BOOL result = FALSE;
     typedef BOOL(WINAPI *PFNSHUTDOWNBLOCKREASONCREATE)(HWND hWnd, LPCWSTR pwszReason);
 
     PFNSHUTDOWNBLOCKREASONCREATE pfn = (PFNSHUTDOWNBLOCKREASONCREATE)GetProcAddress(
             GetModuleHandle(L"User32.dll"), "ShutdownBlockReasonCreate");
-    _ASSERTE(pfn);
+    AssertPtr(pfn);
     if (pfn)
         result = pfn(hWnd, pwszReason);
     return result;
@@ -169,38 +169,40 @@ BOOL ShutdownBlockReasonCreateAPI(HWND hWnd,LPCWSTR pwszReason)
 * Wrapper for Win API function ShutdownBlockReasonDestroy
 * This function defined starting from Vista only.
 */
-BOOL ShutdownBlockReasonDestroyAPI(HWND hWnd)
+static BOOL ShutdownBlockReasonDestroyAPI(HWND hWnd)
 {
     BOOL result = FALSE;
     typedef BOOL(WINAPI *PFNSHUTDOWNBLOCKREASONDESTROY)(HWND hWnd);
 
     PFNSHUTDOWNBLOCKREASONDESTROY pfn = (PFNSHUTDOWNBLOCKREASONDESTROY)GetProcAddress(
         GetModuleHandle(L"User32.dll"), "ShutdownBlockReasonDestroy");
-    _ASSERTE(pfn);
+    AssertPtr(pfn);
     if (pfn)
         result = pfn(hWnd);
     return result;
 }
 
-
-LRESULT CALLBACK WinMainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK WinMainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     LRESULT rc = 0;
     switch (msg)
     {
     case WM_QUERYENDSESSION:
     {
-        rc = !_Module.HasActiveConnection();
-        if (!rc)
+        if (g_pModule)
         {
-            /* place the VBoxSVC into system shutdown list */
-            ShutdownBlockReasonCreateAPI(hwnd, L"Has active connections.");
-            /* decrease a latency of MonitorShutdown loop */
-            ASMAtomicXchgU32(&dwTimeOut, 100);
-            Log(("VBoxSVCWinMain: VBoxSvc has active connections. bActivity = %d. Loc count = %d\n",
-                _Module.bActivity, _Module.GetLockCount()));
+            rc = !g_pModule->HasActiveConnection();
+            if (!rc)
+            {
+                /* place the VBoxSVC into system shutdown list */
+                ShutdownBlockReasonCreateAPI(hwnd, L"Has active connections.");
+                /* decrease a latency of MonitorShutdown loop */
+                ASMAtomicXchgU32(&dwTimeOut, 100);
+                Log(("VBoxSVCWinMain: VBoxSvc has active connections. bActivity = %d. Loc count = %d\n",
+                    g_pModule->bActivity, g_pModule->GetLockCount()));
+            }
+            Log(("VBoxSVCWinMain: WM_QUERYENDSESSION msg: %d rc= %d\n", msg, rc));
         }
-        Log(("VBoxSVCWinMain: WM_QUERYENDSESSION msg: %d rc= %d\n", msg, rc));
     } break;
     case WM_ENDSESSION:
     {
@@ -228,11 +230,10 @@ LRESULT CALLBACK WinMainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     return rc;
 }
 
-
-int CreateMainWindow()
+static int CreateMainWindow()
 {
     int rc = VINF_SUCCESS;
-    _ASSERTE(g_hMainWindow == NULL);
+    Assert(g_hMainWindow == NULL);
 
     LogFlow(("CreateMainWindow\n"));
 
@@ -280,9 +281,9 @@ int CreateMainWindow()
 }
 
 
-void DestroyMainWindow()
+static void DestroyMainWindow()
 {
-    _ASSERTE(g_hMainWindow != NULL);
+    Assert(g_hMainWindow != NULL);
     Log(("SVCMain: DestroyMainWindow \n"));
     if (g_hMainWindow != NULL)
     {
@@ -334,9 +335,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
      */
     RTR3InitExe(argc, &argv, 0);
 
-
-    /* Note that all options are given lowercase/camel case/uppercase to
-     * approximate case insensitive matching, which RTGetOpt doesn't offer. */
     static const RTGETOPTDEF s_aOptions[] =
     {
         { "--embedding",    'e',    RTGETOPT_REQ_NOTHING | RTGETOPT_FLAG_ICASE },
@@ -503,23 +501,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
     int nRet = 0;
     HRESULT hRes = com::Initialize(false /*fGui*/, fRun /*fAutoRegUpdate*/);
+    AssertLogRelMsg(SUCCEEDED(hRes), ("SVCMAIN: init failed: %Rhrc\n", hRes));
 
-    _ASSERTE(SUCCEEDED(hRes));
-    _Module.Init(ObjectMap, hInstance, &LIBID_VirtualBox);
-    _Module.dwThreadID = GetCurrentThreadId();
+    g_pModule = new CExeModule();
+    if(g_pModule == NULL)
+        return RTMsgErrorExit(RTEXITCODE_FAILURE, "not enough memory to create ExeModule.");
+    g_pModule->Init(ObjectMap, hInstance, &LIBID_VirtualBox);
+    g_pModule->dwThreadID = GetCurrentThreadId();
 
     if (!fRun)
     {
 #ifndef VBOX_WITH_MIDL_PROXY_STUB /* VBoxProxyStub.dll does all the registration work. */
         if (fUnregister)
         {
-            _Module.UpdateRegistryFromResource(IDR_VIRTUALBOX, FALSE);
-            nRet = _Module.UnregisterServer(TRUE);
+            g_pModule->UpdateRegistryFromResource(IDR_VIRTUALBOX, FALSE);
+            nRet = g_pModule->UnregisterServer(TRUE);
         }
         if (fRegister)
         {
-            _Module.UpdateRegistryFromResource(IDR_VIRTUALBOX, TRUE);
-            nRet = _Module.RegisterServer(TRUE);
+            g_pModule->UpdateRegistryFromResource(IDR_VIRTUALBOX, TRUE);
+            nRet = g_pModule->RegisterServer(TRUE);
         }
 #endif
         if (pszPipeName)
@@ -546,9 +547,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
     }
     else
     {
-        _Module.StartMonitor();
+        g_pModule->StartMonitor();
 #if _WIN32_WINNT >= 0x0400
-        hRes = _Module.RegisterClassObjects(CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE | REGCLS_SUSPENDED);
+        hRes = g_pModule->RegisterClassObjects(CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE | REGCLS_SUSPENDED);
         _ASSERTE(SUCCEEDED(hRes));
         hRes = CoResumeClassObjects();
 #else
@@ -574,12 +575,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
         DestroyMainWindow();
 
-        _Module.RevokeClassObjects();
+        g_pModule->RevokeClassObjects();
     }
 
-    _Module.Term();
+    g_pModule->Term();
 
     com::Shutdown();
+
+    if(g_pModule)
+        delete g_pModule;
+    g_pModule = NULL;
 
     Log(("SVCMAIN: Returning, COM server process ends.\n"));
     return nRet;

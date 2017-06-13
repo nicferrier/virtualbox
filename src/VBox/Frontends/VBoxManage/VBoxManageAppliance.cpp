@@ -144,7 +144,6 @@ static const RTGETOPTDEF g_aImportApplianceOptions[] =
     { "--options",              'O', RTGETOPT_REQ_STRING },
 };
 
-
 RTEXITCODE handleImportAppliance(HandlerArg *arg)
 {
     HRESULT rc = S_OK;
@@ -312,7 +311,6 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
         // call interpret(); this can yield both warnings and errors, so we need
         // to tinker with the error info a bit
         RTStrmPrintf(g_pStdErr, "Interpreting %ls...\n", path.raw());
-
         rc = pAppliance->Interpret();
         com::ErrorInfo info0(pAppliance, COM_IIDOF(IAppliance));
 
@@ -410,8 +408,6 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
 
                     bool fIgnoreThis = mapIgnoresMapsPerVsys[i][a];
 
-                    long responseCode;
-
                     aEnabled[a] = true;
 
                     switch (t)
@@ -448,7 +444,7 @@ RTEXITCODE handleImportAppliance(HandlerArg *arg)
                             break;
 
                         case VirtualSystemDescriptionType_ProductUrl:
-                            RTPrintf("%2u: ProductUrl: \"%ls\" \n",
+                            RTPrintf("%2u: ProductUrl (ignored): %ls\n",
                                      a, aVBoxValues[a]);
                             break;
 

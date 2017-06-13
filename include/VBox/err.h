@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright (C) 2006-2016 Oracle Corporation
+ * Copyright (C) 2006-2017 Oracle Corporation
  *
  * This file is part of VirtualBox Open Source Edition (OSE), as
  * available from http://www.virtualbox.org. This file is free software;
@@ -1918,6 +1918,13 @@
 #define VERR_SUPLIB_NT_PROCESS_UNTRUSTED_4          (-3774)
 /** Unable to establish trusted of VM process (5). */
 #define VERR_SUPLIB_NT_PROCESS_UNTRUSTED_5          (-3775)
+/** Unable to make text memory writeable (hardening). */
+#define VERR_SUPLIB_TEXT_NOT_WRITEABLE              (-3776)
+/** Unable to seal text memory again to protect against write access (hardening). */
+#define VERR_SUPLIB_TEXT_NOT_SEALED                 (-3777)
+/** Unexpected instruction encountered for which there is no patch strategy
+ * implemented (hardening). */
+#define VERR_SUPLIB_UNEXPECTED_INSTRUCTION          (-3778)
 /** @} */
 
 
@@ -2125,6 +2132,10 @@
 #define VERR_SVM_IPE_4                              (-4064)
 /** Internal SVM processing error no 5. */
 #define VERR_SVM_IPE_5                              (-4065)
+/** The nested-guest \#VMEXIT processing failed, initiate shutdown. */
+#define VERR_SVM_VMEXIT_FAILED                      (-4066)
+/** An operation caused a nested-guest SVM \#VMEXIT. */
+#define VINF_SVM_VMEXIT                              4067
 /** @} */
 
 
@@ -2167,6 +2178,9 @@
 #define VERR_HM_INVALID_HM64ON32OP                  (-4116)
 /** Resume guest execution after injecting a double-fault. */
 #define VINF_HM_DOUBLE_FAULT                        4117
+/** The requested nested-guest VM-exit intercept is not active or not in
+ *  nested-guest execution mode. */
+#define VINF_HM_INTERCEPT_NOT_ACTIVE                4118
 /** @} */
 
 
@@ -2650,6 +2664,8 @@
 #define VERR_SUP_VP_FILE_MODE_ERROR                 (-5674)
 /** Error creating an event semaphore for used with asynchronous reads. */
 #define VERR_SUP_VP_CREATE_READ_EVT_SEM_FAILED      (-5675)
+/** Undesirable module. */
+#define VERR_SUP_VP_UNDESIRABLE_MODULE              (-5676)
 
 /** @} */
 
@@ -2759,6 +2775,9 @@
 #define VERR_AUDIO_NO_FREE_OUTPUT_STREAMS           (-6602)
 /** Pending stream disable operation in progress.  */
 #define VERR_AUDIO_STREAM_PENDING_DISABLE           (-6603)
+/** There is more data available.
+ *  This can happen due to a buffer wraparound of a buffer read/write operation. */
+#define VINF_AUDIO_MORE_DATA_AVAILABLE              (6604)
 /** @} */
 
 

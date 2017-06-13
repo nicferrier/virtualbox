@@ -1,0 +1,22 @@
+rem build file for virtualbox
+rem How do we make portable?
+
+kBuild\envwin.cmd --win64
+
+rem run the VC thing
+"\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
+
+rem run the config
+cscript configure.vbs  --with-mingw-w64=\sandbox\work\mingw64 --with-openssl=\sandbox\work\OpenSSL --with-libcurl=\sandbox\work\curl\lib --with-VC="\Program Files (x86)\Microsoft Visual Studio 10.0\VC" --with-python=\sandbox\Python27
+
+rem find the tools
+set PATH=%PATH%;\sandbox\work\repos\github\virtualbox\tools\win.amd64\bin
+
+rem and Python ffs
+set PATH=%PATH%;\sandbox\Python
+
+rem run the build
+kmk
+
+
+rem end

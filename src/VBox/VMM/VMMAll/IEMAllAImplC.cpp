@@ -525,7 +525,7 @@ IEM_DECL_IMPL_DEF(void, iemAImpl_test_u64,(uint64_t *puDst, uint64_t uSrc, uint3
 
 IEM_DECL_IMPL_DEF(void, iemAImpl_add_u64_locked,(uint64_t *puDst, uint64_t uSrc, uint32_t *pfEFlags))
 {
-    DO_LOCKED_BIN_OP_U64(adc);
+    DO_LOCKED_BIN_OP_U64(add);
 }
 
 
@@ -1349,5 +1349,41 @@ IEM_DECL_IMPL_DEF(void, iemAImpl_arpl,(uint16_t *pu16Dst, uint16_t u16Src, uint3
     }
     else
         *pfEFlags &= ~X86_EFL_ZF;
+}
+
+
+
+IEM_DECL_IMPL_DEF(void, iemAImpl_cmpxchg16b_fallback,(PRTUINT128U pu128Dst, PRTUINT128U pu128RaxRdx,
+                                                      PRTUINT128U pu128RbxRcx, uint32_t *pEFlags))
+{
+    RTUINT128U u128Tmp = *pu128Dst;
+    if (   u128Tmp.s.Lo == pu128RaxRdx->s.Lo
+        && u128Tmp.s.Hi == pu128RaxRdx->s.Hi)
+    {
+        *pu128Dst = *pu128RbxRcx;
+        *pEFlags |= X86_EFL_ZF;
+    }
+    else
+    {
+        *pu128RaxRdx = u128Tmp;
+        *pEFlags &= ~X86_EFL_ZF;
+    }
+}
+
+
+IEM_DECL_IMPL_DEF(void, iemAImpl_movsldup,(PCX86FXSTATE pFpuState, PRTUINT128U puDst, PCRTUINT128U puSrc))
+{
+    RT_NOREF(pFpuState);
+    puDst->au32[0] = puSrc->au32[0];
+    puDst->au32[1] = puSrc->au32[0];
+    puDst->au32[2] = puSrc->au32[2];
+    puDst->au32[3] = puSrc->au32[2];
+}
+
+IEM_DECL_IMPL_DEF(void, iemAImpl_movddup,(PCX86FXSTATE pFpuState, PRTUINT128U puDst, uint64_t uSrc))
+{
+    RT_NOREF(pFpuState);
+    puDst->au64[0] = uSrc;
+    puDst->au64[1] = uSrc;
 }
 

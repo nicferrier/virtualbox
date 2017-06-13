@@ -242,6 +242,11 @@ UIMachineSettingsUSB::UIMachineSettingsUSB()
 #endif /* VBOX_WITH_EHCI */
 }
 
+UIMachineSettingsUSB::~UIMachineSettingsUSB()
+{
+    delete mUSBDevicesMenu;
+}
+
 bool UIMachineSettingsUSB::isUSBEnabled() const
 {
     return mGbUSB->isChecked();
@@ -490,7 +495,7 @@ void UIMachineSettingsUSB::saveFromCacheTo(QVariant &data)
                 for (int iFilterIndex = 0; iFilterIndex < m_cache.childCount(); ++iFilterIndex)
                 {
                     /* Check if USB filter data really changed: */
-                    const UICacheSettingsMachineUSBFilter &usbFilterCache = m_cache.child(iFilterIndex);
+                    const UISettingsCacheMachineUSBFilter &usbFilterCache = m_cache.child(iFilterIndex);
                     if (usbFilterCache.wasChanged())
                     {
                         /* If filter was removed or updated: */

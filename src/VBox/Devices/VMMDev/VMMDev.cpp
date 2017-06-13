@@ -192,6 +192,7 @@ static void vmmdevLogGuestOsInfo(VBoxGuestInfo *pGuestInfo)
         case VBOXOSTYPE_Win2k12_x64 & ~VBOXOSTYPE_x64:    pszOs = "Windows 2k12";   break;
         case VBOXOSTYPE_Win81:                            pszOs = "Windows 8.1";    break;
         case VBOXOSTYPE_Win10:                            pszOs = "Windows 10";     break;
+        case VBOXOSTYPE_Win2k16_x64 & ~VBOXOSTYPE_x64:    pszOs = "Windows 2k16";   break;
         case VBOXOSTYPE_OS2:                              pszOs = "OS/2";           break;
         case VBOXOSTYPE_OS2Warp3:                         pszOs = "OS/2 Warp 3";    break;
         case VBOXOSTYPE_OS2Warp4:                         pszOs = "OS/2 Warp 4";    break;
@@ -3920,6 +3921,7 @@ static DECLCALLBACK(int) vmmdevDestruct(PPDMDEVINS pDevIns)
 
 #ifdef VBOX_WITH_HGCM
     vmmdevHGCMDestroy(pThis);
+    RTCritSectDelete(&pThis->critsectHGCMCmdList);
 #endif
 
 #ifndef VBOX_WITHOUT_TESTING_FEATURES
@@ -4015,7 +4017,6 @@ static DECLCALLBACK(int) vmmdevConstruct(PPDMDEVINS pDevIns, int iInstance, PCFG
                                   "BackdoorLogDisabled|"
                                   "KeepCredentials|"
                                   "HeapEnabled|"
-                                  "RamSize|"
                                   "RZEnabled|"
                                   "GuestCoreDumpEnabled|"
                                   "GuestCoreDumpDir|"
@@ -4027,11 +4028,6 @@ static DECLCALLBACK(int) vmmdevConstruct(PPDMDEVINS pDevIns, int iInstance, PCFG
                                   "TestintXmlOutputFile"
                                   ,
                                   "");
-
-    rc = CFGMR3QueryU64(pCfg, "RamSize", &pThis->cbGuestRAM);
-    if (RT_FAILURE(rc))
-        return PDMDEV_SET_ERROR(pDevIns, rc,
-                                N_("Configuration error: Failed querying \"RamSize\" as a 64-bit unsigned integer"));
 
     rc = CFGMR3QueryBoolDef(pCfg, "GetHostTimeDisabled", &pThis->fGetHostTimeDisabled, false);
     if (RT_FAILURE(rc))
@@ -4112,6 +4108,8 @@ static DECLCALLBACK(int) vmmdevConstruct(PPDMDEVINS pDevIns, int iInstance, PCFG
 
     /** @todo image-to-load-filename? */
 #endif
+
+    pThis->cbGuestRAM = MMR3PhysGetRamSize(PDMDevHlpGetVM(pDevIns));
 
     /*
      * We do our own locking entirely. So, install NOP critsect for the device

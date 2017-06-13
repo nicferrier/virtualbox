@@ -208,7 +208,7 @@ VBOX_VERSION_MINOR = 1
 # This is the current build number. It should be increased every time we publish a
 # new build. The define is available in every source file. Only even build numbers
 # will be published, odd numbers are set during development.
-VBOX_VERSION_BUILD = 14
+VBOX_VERSION_BUILD = 22
 # The raw version string. This *must not* contain any other information/fields than
 # major, minor and build revision (as it is now) -- also will be used for host/guest version
 # comparison.
@@ -234,9 +234,6 @@ ifneq ($(VBOX_RELEASE_EXACT_MATCH),)
  export VBOX_EFI_SH_MODE           = release
  export VBOX_EXTPACKS_SH_MODE      = release
 endif
-
-# by default use the old 5.0 audio code as the new code still has too many regressions
-VBOX_WITH_AUDIO_50 := 1
 
 # Some info on the vendor
 VBOX_VENDOR       = Oracle Corporation
@@ -311,8 +308,8 @@ endif
 # VBOX_WITHOUT_ADDITIONS overrides it.
 VBOX_WITH_ADDITIONS = 1
 # Build the optional ring-0 part of the additions for syntax checking.
-# (Except when cross-building on linux since we're using /usr/src/...)
-ifn1of ($(KBUILD_TARGET).$(KBUILD_HOST_ARCH).$(KBUILD_TARGET_ARCH), linux.x86.amd64 linux.amd64.x86)
+# On linux we build this as a test case instead.
+ifneq ($(KBUILD_TARGET), linux)
  VBOX_WITH_ADDITION_DRIVERS = 1
 endif
 # Build X11 additions. Can be disabled separately.
@@ -345,11 +342,11 @@ endif
 ## @name Documentation
 ## @{
 # The documentation
-VBOX_WITH_DOCS = 0
+VBOX_WITH_DOCS = 1
 # Use documentation from the build server.
 #VBOX_WITH_DOCS_FROM_BUILD_SERVER = 1
 # Include documentation in the package
-VBOX_WITH_DOCS_PACKING = 0
+VBOX_WITH_DOCS_PACKING = 1
 # Include CHM when building docs (unset in LocalConfig.kmk to suppress CHM)
 ifn1of ($(KBUILD_TARGET), linux)
  VBOX_WITH_DOCS_CHM = 1
@@ -392,9 +389,9 @@ VBOX_WITH_MULTI_CORE = 1
 # Activate this to force the VM to pre-allocate the guest RAM before startup
 VBOX_WITH_PREALLOC_RAM_BY_DEFAULT =
 # Enable the debugger.
-VBOX_WITH_DEBUGGER = 0
+VBOX_WITH_DEBUGGER = 1
 # Enable the debugger GUI.
-VBOX_WITH_DEBUGGER_GUI = 0
+VBOX_WITH_DEBUGGER_GUI = 1
 # Enables the second step using IEM (the interpreter).
 VBOX_WITH_2ND_IEM_STEP = 1
 # Enables the third step using IEM (the interpreter).
@@ -561,9 +558,12 @@ endif
 ## @name Other Component
 ## @{
 # Build the installer.
-VBOX_WITH_INSTALLER = 0
+VBOX_WITH_INSTALLER = 1
 # The kernel driver/module and related runtime libraries.
-VBOX_WITH_VBOXDRV = 1
+# On Linux we build this as a test case instead.
+ifneq ($(KBUILD_TARGET), linux)
+ VBOX_WITH_VBOXDRV = 1
+endif
 # The main api.
 VBOX_WITH_MAIN = 1
 # Enables proxy stub for MS COM (speeds up setting IPC for objects).
@@ -593,11 +593,11 @@ endif
 VBOX_WITH_WEBSERVICES = 1
 VBOX_WITH_WEBSERVICES_SSL = 1
 # The Qt GUI.
-VBOX_WITH_QTGUI = 
+VBOX_WITH_QTGUI = 1
 if1of ($(KBUILD_TARGET), linux win solaris)
- VBOX_WITH_QTGUI_V5 =  # r=bird: s/VBOX_WITH_QTGUI_V5/VBOX_WITH_QT5/g - our we released version 5.0 of the VirtualBox GUI last year, remember?
+ VBOX_WITH_QTGUI_V5 = 1 # r=bird: s/VBOX_WITH_QTGUI_V5/VBOX_WITH_QT5/g - our we released version 5.0 of the VirtualBox GUI last year, remember?
 else if "$(KBUILD_TARGET)" == "darwin" && $(KBUILD_HOST_VERSION_MAJOR) >= 13 # (OS X 10.9 Mavericks)
- VBOX_WITH_QTGUI_V5 = 
+ VBOX_WITH_QTGUI_V5 = 1
 endif
 # Indicates the Qt is Cocoa based on the Mac.
 ifeq ($(KBUILD_TARGET),darwin)
@@ -606,7 +606,7 @@ endif
 # HiDPI support for OS X
 VBOX_GUI_WITH_HIDPI = 1
 # The SDL based GUI.
-VBOX_WITH_VBOXSDL = 0
+VBOX_WITH_VBOXSDL = 1
 # Build VBoxSDL with secure label support.
 ifeq ($(filter win.amd64,$(KBUILD_TARGET).$(KBUILD_TARGET_ARCH)),) # too much work with freetype and all that.
 VBOX_WITH_SECURELABEL = 1
@@ -622,33 +622,33 @@ VBOX_WITH_VRDP_RDESKTOP = 1
 ## The Direct Framebuffer GUI.
 #VBOX_WITH_VBOXFB = 1
 # Enables the Python<->XPCOM, Python<->COM and (WS enabled) Python<->WS bindings.
-VBOX_WITH_PYTHON ?= 
+VBOX_WITH_PYTHON ?= 1
 # Enables the PERL<->WS binding (if WS enabled).
 #VBOX_WITH_PERL ?= 1
 # Enables the PHP<->WS binding (if WS enabled).
-VBOX_WITH_PHP ?= 
+VBOX_WITH_PHP ?= 1
 if1of ($(KBUILD_TARGET), darwin linux solaris)
  # Enable Java<->XPCOM bridge + glue code
- VBOX_WITH_JXPCOM ?= 
+ VBOX_WITH_JXPCOM ?= 1
 endif
 if1of ($(KBUILD_TARGET), )
  # Enable Java<->MSCOM glue, bridge is provided by an external lib (Jacob)
- VBOX_WITH_JMSCOM ?= 
+ VBOX_WITH_JMSCOM ?= 1
 endif
 if1of ($(KBUILD_TARGET), darwin linux solaris)
  # Enable Java<->JAX-WS bridge
- VBOX_WITH_JWS ?= 
+ VBOX_WITH_JWS ?= 1
 endif
 # Use XPIDL instead of XSLT stylesheet
 VBOX_WITH_JAVA_SUPPORT_IN_XPIDL ?=
 # Build against multiple Python versions present in the system
-VBOX_WITH_MULTIVERSION_PYTHON ?= 
+VBOX_WITH_MULTIVERSION_PYTHON ?= 1
 # Enable the kchmviewer.
 VBOX_WITH_KCHMVIEWER = 1
 # Build the Validation Kit.
 VBOX_WITH_VALIDATIONKIT = 1
 # Build the testcases.
-VBOX_WITH_TESTCASES = 
+VBOX_WITH_TESTCASES = 1
 # Enable this to build vditool even if VBOX_WITH_TESTCASES is disabled
 VBOX_WITH_VDITOOL =
 # Enable this to build vbox-img even if VBOX_WITH_TESTCASES is disabled
@@ -1166,18 +1166,6 @@ ifdef VBOX_OSE
  VBOX_BRAND_GUI_VBOX_64PX_PNG        := $(PATH_ROOT)/src/VBox/Frontends/VirtualBox/images/OSE/VirtualBox_64px.png
  VBOX_BRAND_GUI_CUBE_42PX_PNG        := $(PATH_ROOT)/src/VBox/Frontends/VirtualBox/images/OSE/VirtualBox_cube_42px.png
  VBOX_BRAND_GUI_VBOX_SVG             := $(PATH_ROOT)/src/VBox/Artwork/OSE/virtualbox.svg
-endif
-
-#
-# Audio: Which code base to use.
-# This can be overriden in LocalConfig.kmk.
-#
-ifdef VBOX_WITH_AUDIO_50
- VBOX_AUDIO_PATH_SOURCES=Audio_50
- VBOX_AUDIO_FILE_SUFFIX=_50
-else
- VBOX_AUDIO_PATH_SOURCES=Audio
- VBOX_AUDIO_FILE_SUFFIX=
 endif
 
 #
@@ -1744,7 +1732,7 @@ endif
 ifndef VBOX_BLD_PYTHON
  if1of ($(KBUILD_HOST), win)
   VBOX_BLD_PYTHON := $(firstword $(rsort $(wildcard $(KBUILD_DEVTOOLS)/win.x86/python/v*/python$(HOSTSUFF_EXE))) \
-	  				   python-not-found.exe)
+  				   python-not-found.exe)
  else
   VBOX_BLD_PYTHON := $(firstword $(which python2.7$(HOSTSUFF_EXE)) $(which python2.6$(HOSTSUFF_EXE)) \
                                  $(which python$(HOSTSUFF_EXE)) $(which python3$(HOSTSUFF_EXE)) \
@@ -1947,8 +1935,7 @@ else
 endif
 
 ifeq ($(KBUILD_HOST),win)
-# VBOX_NM ?= $(PATH_TOOL_MINGW64)/bin/nm.exe -p
- VBOX_NM ?= /sandbox/work/mingw64/bin/nm.exe -p
+ VBOX_NM ?= $(PATH_TOOL_MINGW32)/bin/nm.exe -p
 else ifeq ($(KBUILD_HOST),darwin) # Xcode 7.3.1 nm doesn't like -t, and -x behaves very differently.  Throwing in -B (bsd) to make sure.
  VBOX_NM ?= $(TOOL_$(VBOX_GCC_TOOL)_ENV_SETUP) $(PATH_TOOL_$(VBOX_GCC_TOOL)_TOOLCHAIN_BIN_SLASH)nm -p $(if-expr \
  	$(VBOX_XCODE_VERSION_MAJOR) > 7 || ($(VBOX_XCODE_VERSION_MAJOR) == 7 && $(VBOX_XCODE_VERSION_MINOR) >= 3),-B,)
@@ -2340,6 +2327,12 @@ VBOX_PATH_X11_ROOT      = $(PATH_ROOT)/src/VBox/Additions/x11/x11include
 VBOX_PATH_X11_XFREE_4_3 = $(VBOX_PATH_X11_ROOT)/4.3
 VBOX_PATH_X11_XORG_7_0  = $(VBOX_PATH_X11_ROOT)/7.0
 VBOX_PATH_X11_XORG_7_1  = $(VBOX_PATH_X11_ROOT)/7.1
+
+
+#
+# Miscellaneous includes
+#
+VBOX_JPEG_INCS     = $(PATH_ROOT)/src/libs/jpeg-9b
 
 
 #
@@ -2788,9 +2781,11 @@ VBOX_GCC_NON_PEDANTIC_C   ?= -Wno-sign-compare -Werror-implicit-function-declara
 # Want to enable these:
 #      -wd4242: '=' : conversion from 'uint32_t' to 'uint8_t', possible loss of data
 #      -wd4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data
+#      -wd4200: nonstandard extension used : zero-sized array in struct/union
+#               Cannot generate copy-ctor or copy-assignment operator when UDT contains a zero-sized array
 VBOX_VCC_WARN_ALL ?= -W4 -Wall -wd4065 -wd4996 -wd4127 -wd4706 -wd4201 -wd4214 -wd4510 -wd4512 -wd4610 \
 	-wd4514 -wd4820 -wd4365 -wd4987 -wd4710 -wd4061 -wd4986 -wd4191 -wd4574 -wd4917 -wd4711 -wd4611 -wd4571 -wd4324 -wd4505 \
-	-wd4263 -wd4264 -wd4738
+	-wd4263 -wd4264 -wd4738 -wd4200
 #ifndef VBOX_WITH_MASOCHISTIC_WARNINGS
 # VBOX_VCC_WARN_ALL +=
 #endif
@@ -2910,18 +2905,6 @@ endif
 ifdef VBOX_WITH_NO_GCC_WARNING_POLICY
  $(info build debug: VBOX_WITH_NO_GCC_WARNING_POLICY is enabled)
 endif
-
-#
-# We compile the kernel driver/module and related runtime libraries with C++.
-# This does not work for g++-4.8 and recent Linux kernels.
-#
-ifeq ($(BUILD_TARGET),linux)
- ifeq ($(int-div $(VBOX_GCC_VERSION_CXX),100), 408)
-  VBOX_WITH_VBOXDRV =
-  VBOX_WITH_ADDITION_DRIVERS =
- endif
-endif
-
 
 #
 # Misc stuff that should be after including DynamicConfig.kmk.
@@ -3116,15 +3099,14 @@ ifdef VBOX_SIGNING_MODE
    VBOX_CERTIFICATE_SUBJECT_NAME_ARGS ?= /n "$(VBOX_CERTIFICATE_SUBJECT_NAME)" /a
    #VBOX_CERTIFICATE_FINGERPRINT ?= 7e 92 b6 6b e5 1b 79 d8 ce 3f f2 5c 15 c2 df 6a b8 c7 f2 f2
    VBOX_CERTIFICATE_FINGERPRINT ?= 5b de fe 58 0a 81 66 61 cd b5 7a 57 10 7b f4 18 74 86 ef cc
-   # TEMPORARY HACK!
-   if defined(VBOX_ONLY_VALIDATIONKIT)
-    VBOX_CROSS_CERTIFICATE_FILE ?= $(VBOX_PATH_SELFSIGN)/MSCV-VSClass3.cer
-   else
-    VBOX_CROSS_CERTIFICATE_FILE ?= $(VBOX_PATH_SELFSIGN)/VeriSign Class 3 Public Primary Certification Authority - G5.cer
-   endif
-   VBOX_CROSS_CERTIFICATE_FILE_ARGS ?= /ac "$(VBOX_CROSS_CERTIFICATE_FILE)"
+   VBOX_CROSS_CERTIFICATE_FILE ?= $(VBOX_PATH_SELFSIGN)/VeriSign Class 3 Public Primary Certification Authority - G5.cer
    VBOX_TSA_URL ?= http://timestamp.verisign.com/scripts/timestamp.dll
-   VBOX_TSA_URL_ARGS ?= /t "$(VBOX_TSA_URL)"
+  endif
+  if !defined(VBOX_CROSS_CERTIFICATE_FILE_ARGS) && defined(VBOX_CROSS_CERTIFICATE_FILE)
+   VBOX_CROSS_CERTIFICATE_FILE_ARGS = /ac "$(VBOX_CROSS_CERTIFICATE_FILE)"
+  endif
+  if !defined(VBOX_TSA_URL_ARGS) && defined(VBOX_TSA_URL)
+   VBOX_TSA_URL_ARGS = /t "$(VBOX_TSA_URL)"
   endif
   VBOX_CERTIFICATE_STORE ?= my
   VBOX_CERTIFICATE_STORE_ARGS ?= /s "$(VBOX_CERTIFICATE_STORE)"
@@ -3135,16 +3117,18 @@ ifdef VBOX_SIGNING_MODE
    #VBOX_CERTIFICATE_SHA2_SUBJECT_NAME ?= MyTestCertificateSha2
    VBOX_CERTIFICATE_SHA2_SUBJECT_NAME_ARGS ?= /n "$(VBOX_CERTIFICATE_SHA2_SUBJECT_NAME)"
   else # release
-   if !defined(VBOX_ONLY_VALIDATIONKIT) # TEMPORARY HACK for the validation kitty! The build box is too old.
-    VBOX_CERTIFICATE_SHA2_SUBJECT_NAME ?= Oracle Corporation
-   endif
+   VBOX_CERTIFICATE_SHA2_SUBJECT_NAME ?= Oracle Corporation
    VBOX_CERTIFICATE_SHA2_SUBJECT_NAME_ARGS ?= /n "$(VBOX_CERTIFICATE_SHA2_SUBJECT_NAME)" /a
    #VBOX_CERTIFICATE_SHA2_FINGERPRINT ?= 31 31 bb 58 8b 19 9e 6e 85 0f d3 35 82 b0 c5 82 55 e1 6c 49
    VBOX_CERTIFICATE_SHA2_FINGERPRINT ?= 22 05 6a 4d 46 2e 3d 2b b2 c3 2f bf b0 5b 84 c4 65 9c f7 fe
    VBOX_CROSS_CERTIFICATE_SHA2_FILE ?= $(VBOX_PATH_SELFSIGN)/VeriSign Class 3 Public Primary Certification Authority - G5.cer
-   VBOX_CROSS_CERTIFICATE_SHA2_FILE_ARGS ?= /ac "$(VBOX_CROSS_CERTIFICATE_SHA2_FILE)"
    VBOX_TSA_SHA2_URL ?= http://sha256timestamp.ws.symantec.com/sha256/timestamp
-   VBOX_TSA_SHA2_URL_ARGS ?= /tr "$(VBOX_TSA_SHA2_URL)"
+  endif
+  if !defined(VBOX_CROSS_CERTIFICATE_SHA2_FILE_ARGS) && defined(VBOX_CROSS_CERTIFICATE_SHA2_FILE)
+   VBOX_CROSS_CERTIFICATE_SHA2_FILE_ARGS = /ac "$(VBOX_CROSS_CERTIFICATE_SHA2_FILE)"
+  endif
+  if !defined(VBOX_TSA_SHA2_URL_ARGS) && defined(VBOX_TSA_SHA2_URL)
+   VBOX_TSA_SHA2_URL_ARGS = /tr "$(VBOX_TSA_SHA2_URL)"
   endif
   VBOX_CERTIFICATE_SHA2_STORE ?= my
   VBOX_CERTIFICATE_SHA2_STORE_ARGS ?= /s "$(VBOX_CERTIFICATE_SHA2_STORE)"
@@ -3642,7 +3626,7 @@ VBOXLNX32GUEST_SUFF_LIB = .a
 # SDKs for external libraries.
 #
 SDK_VBOX_LIBXML2          = .
-SDK_VBOX_LIBXML2_INCS   ?= $(PATH_ROOT)/src/libs/libxml2-2.9.2/include
+SDK_VBOX_LIBXML2_INCS   ?= $(PATH_ROOT)/src/libs/libxml2-2.9.4/include
 SDK_VBOX_LIBXML2_DEFS  ?= _REENTRANT
 SDK_VBOX_LIBXML2_DEFS.win += WIN32 _WINDOWS _MBCS
 # note: no linking to LIB here, we do that explicitly in src/VBox/Runtime/Makefile.kmk to link
@@ -3696,23 +3680,16 @@ if "$(SDK_VBOX_OPENSSL_INCS)" == "$(SDK_VBOX_OPENSSL_VBOX_DEFAULT_INCS)"
  SDK_VBOX_OPENSSL2_LIBS = $(NO_SUCH_VARIABLE)
 endif
 
-# this makes no sense because the build gets passed the curl lib
 ifdef VBOX_WITH_LIBCURL
 SDK_VBOX_LIBCURL       = .
-#SDK_VBOX_LIBCURL_INCS ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
-#SDK_VBOX_LIBCURL_LIBS ?= $(PATH_STAGE_LIB)/VBox-libcurl$(VBOX_SUFF_LIB)
-#SDK_VBOX_LIBCURL_DEFS ?= BUILDING_LIBCURL
+SDK_VBOX_LIBCURL_INCS ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
+SDK_VBOX_LIBCURL_LIBS ?= $(PATH_STAGE_LIB)/VBox-libcurl$(VBOX_SUFF_LIB)
+SDK_VBOX_LIBCURL_DEFS ?= BUILDING_LIBCURL
 
-# Just make the x86 ones the same as the main ones
-SDK_VBOX_LIBCURL-x86           = $(SDK_VBOX_LIBCURL)
-SDK_VBOX_LIBCURL-x86_INCS     ?= $(SDK_VBOX_LIBCURL_INCS)
-SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(SDK_VBOX_LIBCURL_LIBS)
-SDK_VBOX_LIBCURL-x86_DEFS     ?= $(SDK_VBOX_LIBCURL_DEFS)
-
-# SDK_VBOX_LIBCURL-x86           = $(SDK_VBOX_LIBCURL)
-# SDK_VBOX_LIBCURL-x86_INCS     ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
-# SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(PATH_STAGE_LIB)/VBox-libcurl-x86$(VBOX_SUFF_LIB)
-# SDK_VBOX_LIBCURL-x86_DEFS     ?= BUILDING_LIBCURL
+SDK_VBOX_LIBCURL-x86           = .
+SDK_VBOX_LIBCURL-x86_INCS     ?= $(PATH_ROOT)/src/libs/curl-7.50.3/include
+SDK_VBOX_LIBCURL-x86_LIBS.x86 ?= $(PATH_STAGE_LIB)/VBox-libcurl-x86$(VBOX_SUFF_LIB)
+SDK_VBOX_LIBCURL-x86_DEFS     ?= BUILDING_LIBCURL
 endif
 
 SDK_VBOX_VPX       = .
@@ -3726,68 +3703,6 @@ SDK_VBOX_VPX_LIBS ?= $(PATH_STAGE_LIB)/VBox-libvpx$(VBOX_SUFF_LIB)
 SDK_VBOX_NTDLL = Mini NTDLL import library, required IPRT.
 SDK_VBOX_NTDLL_LIBS.x86   ?= $(PATH_STAGE_LIB)/RuntimeR3NtDll-x86.lib
 SDK_VBOX_NTDLL_LIBS.amd64 ?= $(PATH_STAGE_LIB)/RuntimeR3NtDll-amd64.lib
-
-#
-# The linux kernel headers(/sources).
-#
-if1of ($(KBUILD_TARGET), linux)
- ifeq ($(origin VBOX_LINUX_SRC),undefined)
-  ifneq ($(wildcard /lib/modules/$(shell uname -r)/build/include/linux/autoconf.h  /lib/modules/$(shell uname -r)/build/include/generated/autoconf.h),)
-   export VBOX_LINUX_SRC := /lib/modules/$(shell uname -r)/build
-  else
-   export VBOX_LINUX_SRC := /usr/src/linux
-  endif
- endif
- ifneq ($(VBOX_LINUX_SRC),)
-  ifeq ($(origin VBOX_LINUX_INCS),undefined)
-   export VBOX_LINUX_INCS := $(VBOX_LINUX_SRC)/include
-   # XXX hack alert! Support split Linux kernels (make O=<build directory>). kernelpath points to
-   #                 the obj directory while VBOX_LINUX_SRC points to the virgin source directory.
-   # XXX put this crap elsewhere
-   kernelpath := $(shell $(SED_EXT) -ne 's+^KERNELSRC.*= *\(.*\)+\1+p' $(VBOX_LINUX_SRC)/Makefile)
-   ifeq ($(kernelpath),)
-    # Linux >= 2.6.25
-    kernelpath := $(shell $(SED_EXT) -ne 's+^MAKEARGS *:= *-C *\(\S*\).*+\1+p' $(VBOX_LINUX_SRC)/Makefile)
-   endif
-   ifneq ($(kernelpath),)
-    # absolute path?
-    ifneq ($(patsubst /%,,$(kernelpath)),)
-     # no, relative path
-     kernelpath := $(realpath $(VBOX_LINUX_SRC)/$(kernelpath))
-    endif
-   endif
-   ifneq ($(kernelpath),)
-    VBOX_LINUX_INCS += $(VBOX_LINUX_SRC)/include2 $(kernelpath)/include
-   else
-    kernelpath := $(VBOX_LINUX_SRC)
-   endif
-   #
-   VBOX_LINUX_INCS  += $(kernelpath)/include/asm-i386/mach-default \
-                       $(kernelpath)/include/asm-x86/mach-default \
-                       $(kernelpath)/include/drm \
-                       $(kernelpath)/arch/x86/include \
-                       $(kernelpath)/arch/x86/include/asm/mach-default \
-                       $(kernelpath)/arch/x86/include/uapi \
-                       $(VBOX_LINUX_SRC)/arch/x86/include/generated \
-                       $(VBOX_LINUX_SRC)/arch/x86/include/generated/uapi \
-                       $(kernelpath)/include/uapi \
-                       $(VBOX_LINUX_SRC)/include/generated/uapi \
-                       $(kernelpath)/include
-  endif
- endif
- # Since Linux 2.6.15, <linux/autoconf.h> is included like this. It cannot hurt to do the
- # same for older Linux kernels
- ifneq ($(wildcard $(kernelpath)/include/linux/kconfig.h),)
-  # Linux >= 3.1
-  export VBOX_LINUX_INCLUDE := -include $(kernelpath)/include/linux/kconfig.h
- else ifneq ($(wildcard $(VBOX_LINUX_SRC)/include/generated/autoconf.h),)
-  # Linux >= 2.6.33
-  export VBOX_LINUX_INCLUDE := -include $(VBOX_LINUX_SRC)/include/generated/autoconf.h
- else ifneq ($(wildcard $(VBOX_LINUX_SRC)/include/linux/autoconf.h),)
-  # Linux < 2.6.33
-  export VBOX_LINUX_INCLUDE := -include $(VBOX_LINUX_SRC)/include/linux/autoconf.h
- endif
-endif
 
 #
 # Determine Solaris version.
@@ -4167,28 +4082,7 @@ ifeq ($(KBUILD_TARGET),win)
 endif
 
 ifeq ($(KBUILD_TARGET),linux)
-TEMPLATE_VBOXR0DRV_TOOL                = $(VBOX_GCC_TOOL)
-TEMPLATE_VBOXR0DRV_INSTTYPE.linux      = none
-TEMPLATE_VBOXR0DRV_DEFS               += __KERNEL__ MODULE
-TEMPLATE_VBOXR0DRV_INCS                = $(VBOX_LINUX_INCS)
-TEMPLATE_VBOXR0DRV_CFLAGS              = -fno-pie -nostdinc -iwithprefix include $(VBOX_LINUX_INCLUDE) \
-	$(VBOX_GCC_WARN) -Wstrict-prototypes $(VBOX_GCC_Wno-pointer-sign) -Wno-sign-compare $(VBOX_GCC_fdiagnostics-show-option) \
-	$(VBOX_GCC_fno-stack-protector) $(VBOX_GCC_R0_OPT) $(VBOX_GCC_R0_FP) \
-	-fno-strict-aliasing -fno-common -Werror-implicit-function-declaration
-TEMPLATE_VBOXR0DRV_CFLAGS.x86          = -mpreferred-stack-boundary=2 -msoft-float
-TEMPLATE_VBOXR0DRV_CFLAGS.amd64        = -m64 -mno-red-zone -mcmodel=kernel -mno-sse -mno-mmx -mno-sse2 -mno-3dnow \
-	-fno-reorder-blocks -ffreestanding -fno-asynchronous-unwind-tables -funit-at-a-time -Wno-sign-compare
-TEMPLATE_VBOXR0DRV_CXXFLAGS            = $(filter-out -Wstrict-prototypes -Wno-pointer-sign -ffreestanding -Werror-implicit-function-declaration,$(TEMPLATE_VBOXR0DRV_CFLAGS) $(TEMPLATE_VBOXR0DRV_CFLAGS.$(KBUILD_TARGET_ARCH))) -fno-exceptions -fno-rtti
-  ifndef VBOX_LINUX_VERSION_2_4
-# 2.6
-TEMPLATE_VBOXR0DRV_SYSSUFF             = .ko
-TEMPLATE_VBOXR0DRV_LDFLAGS.x86         = -m elf_i386 -r
-TEMPLATE_VBOXR0DRV_LDFLAGS.amd64       = -m elf_x86_64 -r
-  else
-# 2.4
-TEMPLATE_VBOXR0DRV_SYSSUFF             = .o
-TEMPLATE_VBOXR0DRV_LDFLAGS             = -r -s
-  endif
+TEMPLATE_VBOXR0DRV_TOOL                = $(NO_SUCH_VARIABLE)
 endif
 
 ifeq ($(KBUILD_TARGET),os2)
@@ -4870,13 +4764,11 @@ else
 endif
 TEMPLATE_VBoxR3Static_LIBS         += \
  	$(VBOX_LIB_RUNTIME_STATIC)
-
-#ifndef SDK_VBOX_OPENSSL_LIBS
-# TEMPLATE_VBoxR3Static_LIBS        += \
-# 	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
-# 	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
-#endif
-
+ifndef SDK_VBOX_OPENSSL_LIBS
+ TEMPLATE_VBoxR3Static_LIBS        += \
+ 	$(PATH_STAGE_LIB)/VBox-libcrypto$(VBOX_SUFF_LIB) \
+ 	$(PATH_STAGE_LIB)/VBox-libssl$(VBOX_SUFF_LIB)
+endif
 ifndef SDK_VBOX_LIBXML2_LIBS
  TEMPLATE_VBoxR3Static_LIBS        += \
  	$(PATH_STAGE_LIB)/VBox-libxml2-static$(VBOX_SUFF_LIB)
@@ -6965,7 +6857,7 @@ endif
 SVN                    ?= svn$(HOSTSUFF_EXE)
 VBOX_SVN_REV_KMK        = $(PATH_OUT)/revision.kmk
 ifndef VBOX_SVN_REV
- VBOX_SVN_REV_FALLBACK := $(patsubst %:,,  $Rev: 112924 $  )
+ VBOX_SVN_REV_FALLBACK := $(patsubst %:,,  $Rev: 115126 $  )
  VBOX_SVN_DEP          := $(firstword $(wildcard $(PATH_ROOT)/.svn/wc.db $(abspath $(PATH_ROOT)/../.svn/wc.db) $(abspath $(PATH_ROOT)/../../.svn/wc.db) $(PATH_ROOT)/.svn/entries))
  ifeq ($(which $(SVN)),)
   VBOX_SVN_DEP         :=

@@ -79,6 +79,8 @@ static DECLCALLBACK(int) testGetImport(RTLDRMOD hLdrMod, const char *pszModule, 
         *pValue = (uintptr_t)0;
     else if (!strcmp(pszSymbol, "MyPrintf")             || !strcmp(pszSymbol, "_MyPrintf"))
         *pValue = (uintptr_t)RTPrintf;
+    else if (!strcmp(pszSymbol, "SomeImportFunction")   || !strcmp(pszSymbol, "_SomeImportFunction"))
+        *pValue = (uintptr_t)0;
     else
     {
         RTPrintf("tstLdr-4: Unexpected import '%s'!\n", pszSymbol);
@@ -127,7 +129,11 @@ static int testLdrOne(const char *pszFilename)
     for (i = 0; i < RT_ELEMENTS(aLoads); i++)
     {
         if (!strncmp(aLoads[i].pszName, RT_STR_TUPLE("kLdr-")))
+        {
             rc = RTLdrOpenkLdr(pszFilename, 0, RTLDRARCH_WHATEVER, &aLoads[i].hLdrMod);
+            if (rc == VERR_ELF_EXE_NOT_SUPPORTED)
+                continue;
+        }
         else
             rc = RTLdrOpen(pszFilename, 0, RTLDRARCH_WHATEVER, &aLoads[i].hLdrMod);
         if (RT_FAILURE(rc))
@@ -174,6 +180,9 @@ static int testLdrOne(const char *pszFilename)
     {
         for (i = 0; i < RT_ELEMENTS(aLoads); i += 1)
         {
+            /* VERR_ELF_EXE_NOT_SUPPORTED in the previous loop? */
+            if (!aLoads[i].hLdrMod)
+                continue; /* VERR_ELF_EXE_NOT_SUPPORTED in the previous loop */
             /* get the pointer. */
             RTUINTPTR Value;
             rc = RTLdrGetSymbolEx(aLoads[i].hLdrMod, aLoads[i].pvBits, (uintptr_t)aLoads[i].pvBits,
@@ -197,9 +206,24 @@ static int testLdrOne(const char *pszFilename)
                 RTPrintf("tstLdr-4: load #%d Test1 -> %#x\n", i, rc);
                 cErrors++;
             }
+
+            /* While we're here, check a couple of RTLdrQueryProp calls too */
+            void *pvBits = aLoads[i].pvBits;
+            for (unsigned iBits = 0; iBits < 2; iBits++, pvBits = NULL)
+            {
+                union
+                {
+                    char szName[127];
+                } uBuf;
+                rc = RTLdrQueryPropEx(aLoads[i].hLdrMod, RTLDRPROP_INTERNAL_NAME, aLoads[i].pvBits,
+                                      uBuf.szName, sizeof(uBuf.szName), NULL);
+                if (RT_SUCCESS(rc))
+                    RTPrintf("tstLdr-4: internal name #%d: '%s'\n", i, uBuf.szName);
+                else if (rc != VERR_NOT_FOUND && rc != VERR_NOT_SUPPORTED)
+                    RTPrintf("tstLdr-4: internal name #%d failed: %Rrc\n", i, rc);
+            }
         }
     }
-
 
     /*
      * Clean up.
